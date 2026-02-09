@@ -12,7 +12,6 @@ SKIP_PLUGIN=false
 LOCAL_BINARY=""
 REPO="Epiphytic/captain-hook"
 PLUGIN_DIR="$HOME/.captain-hook/plugin"
-MARKETPLACE_DIR="$HOME/.captain-hook/marketplace"
 
 # ---------- Colors and output helpers ----------
 
@@ -318,6 +317,27 @@ install_plugin() {
 PJSON
 	info "Created plugin.json (version ${version})"
 
+	# -- .claude-plugin/marketplace.json --
+	cat >"${PLUGIN_DIR}/.claude-plugin/marketplace.json" <<'MKTJSON'
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "captain-hook-local",
+  "description": "Local captain-hook plugin marketplace",
+  "owner": {
+    "name": "Epiphytic",
+    "email": "captain-hook@epiphytic.dev"
+  },
+  "plugins": [
+    {
+      "name": "captain-hook",
+      "description": "Intelligent permission gating for Claude Code",
+      "source": "./"
+    }
+  ]
+}
+MKTJSON
+	info "Created marketplace.json"
+
 	# -- hooks/hooks.json --
 	cat >"${PLUGIN_DIR}/hooks/hooks.json" <<'HOOKS'
 {
@@ -540,52 +560,23 @@ register_plugin_with_claude() {
 
 	step "Registering plugin with Claude CLI"
 
-	# Create local marketplace structure
-	mkdir -p "${MARKETPLACE_DIR}/.claude-plugin"
+	# The plugin directory doubles as a local marketplace (marketplace.json + plugin.json
+	# both live in .claude-plugin/). Register it as a marketplace, then install the plugin.
 
-	cat >"${MARKETPLACE_DIR}/.claude-plugin/marketplace.json" <<MJSON
-{
-  "name": "captain-hook-local",
-  "description": "Local captain-hook marketplace",
-  "plugins": [
-    {
-      "name": "captain-hook",
-      "source": "../plugin",
-      "description": "Intelligent permission gating for Claude Code"
-    }
-  ]
-}
-MJSON
-
-	# Create symlink from marketplace to plugin directory
-	local link="${MARKETPLACE_DIR}/captain-hook"
-	if [[ -L "$link" ]]; then
-		rm "$link"
-	fi
-	ln -sf "${PLUGIN_DIR}" "$link"
-
-	info "Created local marketplace at ${MARKETPLACE_DIR}/"
-
-	# Attempt to register with Claude CLI
-	local scope_flag=""
-	case "$SCOPE" in
-	user) scope_flag="--scope user" ;;
-	project) scope_flag="--scope project" ;;
-	local) scope_flag="--scope local" ;;
-	esac
-
-	if claude plugin marketplace add "${MARKETPLACE_DIR}" ${scope_flag} 2>/dev/null; then
-		success "Added local marketplace to Claude."
-		if claude plugin install captain-hook ${scope_flag} 2>/dev/null; then
-			success "Installed captain-hook plugin via Claude CLI."
-		else
-			warn "Could not install plugin via CLI. You can install it manually:"
-			echo "    claude plugin install captain-hook"
-		fi
+	if claude plugin marketplace add "${PLUGIN_DIR}" 2>&1; then
+		success "Added captain-hook-local marketplace to Claude."
 	else
 		warn "Could not register marketplace with Claude CLI."
 		info "You can use captain-hook by running Claude with:"
 		echo "    claude --plugin-dir ${PLUGIN_DIR}"
+		return
+	fi
+
+	if claude plugin install "captain-hook@captain-hook-local" 2>&1; then
+		success "Installed captain-hook plugin via Claude CLI."
+	else
+		warn "Could not install plugin via CLI. You can install it manually:"
+		echo "    claude plugin install captain-hook@captain-hook-local"
 	fi
 }
 

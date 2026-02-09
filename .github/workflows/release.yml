@@ -197,15 +197,24 @@ jobs:
           # Clean up
           rm -rf /tmp/.captain-hook
 
-      - name: Verify plugin files installed
+      - name: Verify plugin registered with Claude
         run: |
+          # Verify the plugin appears in Claude's plugin list
+          claude plugin list 2>&1 | grep -q "captain-hook@captain-hook-local" || { echo "FAIL: captain-hook not in claude plugin list"; exit 1; }
+          echo "Plugin registered with Claude CLI"
+
+          # Verify plugin files in the local marketplace directory
           test -f ~/.captain-hook/plugin/hooks/hooks.json || { echo "FAIL: hooks.json not found"; exit 1; }
           python3 -c "import json; json.load(open('$HOME/.captain-hook/plugin/hooks/hooks.json'))"
           echo "hooks.json is valid JSON"
 
           test -f ~/.captain-hook/plugin/.claude-plugin/plugin.json || { echo "FAIL: plugin.json not found"; exit 1; }
-          python3 -c "import json; json.load(open('$HOME/.captain-hook/plugin/.claude-plugin/plugin.json'))"
-          echo "plugin.json is valid JSON"
+          test -f ~/.captain-hook/plugin/.claude-plugin/marketplace.json || { echo "FAIL: marketplace.json not found"; exit 1; }
+          echo "Plugin and marketplace manifests present"
+
+          # Verify plugin cached by Claude
+          test -d ~/.claude/plugins/cache/captain-hook-local/captain-hook/ || { echo "FAIL: plugin not in Claude cache"; exit 1; }
+          echo "Plugin cached by Claude"
 
           # Verify skill files exist
           for skill in register disable enable switch status; do
@@ -216,7 +225,7 @@ jobs:
           test -f ~/.captain-hook/plugin/agents/supervisor.md || { echo "FAIL: agents/supervisor.md not found"; exit 1; }
           echo "Agent file present"
 
-          echo "Plugin file verification passed"
+          echo "Plugin verification passed"
 
   release:
     name: Create GitHub Release
