@@ -9,25 +9,15 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-linux:
     name: Build ${{ matrix.target }}
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         include:
           - target: x86_64-unknown-linux-gnu
-            os: ubuntu-latest
-            use_cross: true
           - target: aarch64-unknown-linux-gnu
-            os: ubuntu-latest
-            use_cross: true
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            use_cross: false
-          - target: aarch64-apple-darwin
-            os: macos-latest
-            use_cross: false
     steps:
       - uses: actions/checkout@v4
 
@@ -36,29 +26,80 @@ jobs:
         with:
           targets: ${{ matrix.target }}
 
-      - name: Install protobuf-compiler (Linux)
-        if: runner.os == 'Linux'
+      - name: Install protobuf-compiler
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
-      - name: Install protobuf-compiler (macOS)
-        if: runner.os == 'macOS'
-        run: brew install protobuf
-
       - name: Install cross
-        if: matrix.use_cross
         run: cargo install cross --locked
 
       - name: Build with cross
-        if: matrix.use_cross
+        run: cross build --release --target ${{ matrix.target }}
+
+      - name: Package binary
+        shell: bash
         env:
+          TAG_NAME: ${{ github.ref_name }}
           BUILD_TARGET: ${{ matrix.target }}
-        run: cross build --release --target "$BUILD_TARGET"
+        run: |
+          BIN_NAME="captain-hook"
+          ARCHIVE_NAME="${BIN_NAME}-${TAG_NAME}-${BUILD_TARGET}"
+
+          mkdir -p staging
+          cp "target/${BUILD_TARGET}/release/${BIN_NAME}" staging/
+          cd staging
+
+          tar czf "../${ARCHIVE_NAME}.tar.gz" "${BIN_NAME}"
+          cd ..
+
+          sha256sum "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
+
+      - name: Package plugin files
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          ARCHIVE_NAME="captain-hook-${TAG_NAME}-plugin-files"
+          tar czf "${ARCHIVE_NAME}.tar.gz" \
+            hooks/hooks.json \
+            .claude-plugin/plugin.json \
+            skills/register/SKILL.md \
+            skills/disable/SKILL.md \
+            skills/enable/SKILL.md \
+            skills/switch/SKILL.md \
+            skills/status/SKILL.md \
+            agents/supervisor.md
+
+          sha256sum "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: captain-hook-${{ matrix.target }}
+          path: |
+            captain-hook-*.tar.gz
+            captain-hook-*.sha256
+
+  build-macos:
+    name: Build ${{ matrix.target }}
+    runs-on: [self-hosted, captain-hook, macos]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: aarch64-apple-darwin
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install protobuf-compiler
+        run: brew install protobuf || true
 
       - name: Build with cargo
-        if: "!matrix.use_cross"
-        env:
-          BUILD_TARGET: ${{ matrix.target }}
-        run: cargo build --release --target "$BUILD_TARGET"
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Package binary
         shell: bash
@@ -86,9 +127,105 @@ jobs:
             captain-hook-*.tar.gz
             captain-hook-*.sha256
 
+  install-test:
+    name: Install validation
+    needs: build-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download x86_64 binary artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: captain-hook-x86_64-unknown-linux-gnu
+          path: artifacts
+
+      - name: Extract binary
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          tar xzf "artifacts/captain-hook-${TAG_NAME}-x86_64-unknown-linux-gnu.tar.gz"
+          chmod +x captain-hook
+
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install Claude Code
+        run: npm install -g @anthropic-ai/claude-code
+
+      - name: Run install script
+        run: |
+          chmod +x scripts/install.sh
+          ./scripts/install.sh --binary ./captain-hook --scope user
+
+      - name: Add install dir to PATH
+        run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify captain-hook --version
+        run: |
+          captain-hook --version
+          echo "Version check passed"
+
+      - name: Verify captain-hook --help
+        run: |
+          HELP_OUTPUT=$(captain-hook --help)
+          echo "$HELP_OUTPUT"
+          echo "$HELP_OUTPUT" | grep -q "check" || { echo "FAIL: --help missing 'check' subcommand"; exit 1; }
+          echo "$HELP_OUTPUT" | grep -q "register" || { echo "FAIL: --help missing 'register' subcommand"; exit 1; }
+          echo "Help check passed"
+
+      - name: Smoke test captain-hook check
+        run: |
+          # Set up config and register a session for the smoke test
+          cd /tmp
+          captain-hook init
+          captain-hook register --session-id smoke-test --role maintainer
+
+          # Run a check — maintainer role with a Bash command should produce valid JSON
+          OUTPUT=$(echo '{"session_id":"smoke-test","tool_name":"Bash","tool_input":{"command":"ls"},"cwd":"/tmp"}' | captain-hook check 2>/dev/null || true)
+          echo "Output: $OUTPUT"
+
+          # Validate it's JSON with hookSpecificOutput.permissionDecision
+          echo "$OUTPUT" | python3 -c "
+          import sys, json
+          data = json.load(sys.stdin)
+          assert 'hookSpecificOutput' in data, 'missing hookSpecificOutput'
+          assert 'permissionDecision' in data['hookSpecificOutput'], 'missing permissionDecision'
+          decision = data['hookSpecificOutput']['permissionDecision']
+          assert decision in ('allow', 'deny', 'ask'), f'unexpected decision: {decision}'
+          print(f'Valid response: permissionDecision={decision}')
+          "
+          echo "Smoke test passed"
+
+          # Clean up
+          rm -rf /tmp/.captain-hook
+
+      - name: Verify plugin files installed
+        run: |
+          test -f ~/.captain-hook/plugin/hooks/hooks.json || { echo "FAIL: hooks.json not found"; exit 1; }
+          python3 -c "import json; json.load(open('$HOME/.captain-hook/plugin/hooks/hooks.json'))"
+          echo "hooks.json is valid JSON"
+
+          test -f ~/.captain-hook/plugin/.claude-plugin/plugin.json || { echo "FAIL: plugin.json not found"; exit 1; }
+          python3 -c "import json; json.load(open('$HOME/.captain-hook/plugin/.claude-plugin/plugin.json'))"
+          echo "plugin.json is valid JSON"
+
+          # Verify skill files exist
+          for skill in register disable enable switch status; do
+            test -f ~/.captain-hook/plugin/skills/$skill/SKILL.md || { echo "FAIL: skills/$skill/SKILL.md not found"; exit 1; }
+          done
+          echo "All skill files present"
+
+          test -f ~/.captain-hook/plugin/agents/supervisor.md || { echo "FAIL: agents/supervisor.md not found"; exit 1; }
+          echo "Agent file present"
+
+          echo "Plugin file verification passed"
+
   release:
     name: Create GitHub Release
-    needs: build
+    needs: [install-test, build-macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
