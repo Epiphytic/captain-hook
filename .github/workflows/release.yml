@@ -10,42 +10,38 @@ permissions:
 
 jobs:
   build-linux:
-    name: Build ${{ matrix.target }}
+    name: Build x86_64-unknown-linux-gnu
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: x86_64-unknown-linux-gnu
-          - target: aarch64-unknown-linux-gnu
     steps:
       - uses: actions/checkout@v4
 
       - name: Install stable Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & target
+        uses: actions/cache@v4
         with:
-          targets: ${{ matrix.target }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-release-
 
-      - name: Install protobuf-compiler
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
-
-      - name: Install cross
-        run: cargo install cross --locked
-
-      - name: Build with cross
-        run: cross build --release --target ${{ matrix.target }}
+      - name: Build
+        run: cargo build --release
 
       - name: Package binary
-        shell: bash
         env:
           TAG_NAME: ${{ github.ref_name }}
-          BUILD_TARGET: ${{ matrix.target }}
         run: |
           BIN_NAME="captain-hook"
+          BUILD_TARGET="x86_64-unknown-linux-gnu"
           ARCHIVE_NAME="${BIN_NAME}-${TAG_NAME}-${BUILD_TARGET}"
 
           mkdir -p staging
-          cp "target/${BUILD_TARGET}/release/${BIN_NAME}" staging/
+          cp "target/release/${BIN_NAME}" staging/
           cd staging
 
           tar czf "../${ARCHIVE_NAME}.tar.gz" "${BIN_NAME}"
@@ -54,7 +50,6 @@ jobs:
           sha256sum "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
 
       - name: Package plugin files
-        if: matrix.target == 'x86_64-unknown-linux-gnu'
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
@@ -74,44 +69,44 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: captain-hook-${{ matrix.target }}
+          name: captain-hook-x86_64-unknown-linux-gnu
           path: |
             captain-hook-*.tar.gz
             captain-hook-*.sha256
 
   build-macos:
-    name: Build ${{ matrix.target }}
+    name: Build aarch64-apple-darwin
     runs-on: [self-hosted, captain-hook, macos]
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - target: aarch64-apple-darwin
     steps:
       - uses: actions/checkout@v4
 
       - name: Install stable Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry & target
+        uses: actions/cache@v4
         with:
-          targets: ${{ matrix.target }}
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-release-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-release-
 
-      - name: Install protobuf-compiler
-        run: brew install protobuf || true
-
-      - name: Build with cargo
-        run: cargo build --release --target ${{ matrix.target }}
+      - name: Build
+        run: cargo build --release
 
       - name: Package binary
-        shell: bash
         env:
           TAG_NAME: ${{ github.ref_name }}
-          BUILD_TARGET: ${{ matrix.target }}
         run: |
           BIN_NAME="captain-hook"
+          BUILD_TARGET="aarch64-apple-darwin"
           ARCHIVE_NAME="${BIN_NAME}-${TAG_NAME}-${BUILD_TARGET}"
 
           mkdir -p staging
-          cp "target/${BUILD_TARGET}/release/${BIN_NAME}" staging/
+          cp "target/release/${BIN_NAME}" staging/
           cd staging
 
           tar czf "../${ARCHIVE_NAME}.tar.gz" "${BIN_NAME}"
@@ -122,7 +117,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: captain-hook-${{ matrix.target }}
+          name: captain-hook-aarch64-apple-darwin
           path: |
             captain-hook-*.tar.gz
             captain-hook-*.sha256
