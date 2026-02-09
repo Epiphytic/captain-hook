@@ -1,6 +1,5 @@
 {
   "name": "captain-hook",
-  "version": "0.1.0",
-  "description": "Intelligent permission gating for Claude Code",
-  "binary": "target/release/captain-hook"
+  "version": "0.1.1",
+  "description": "Intelligent permission gating for Claude Code"
 }
