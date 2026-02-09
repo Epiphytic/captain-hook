@@ -1,0 +1,61 @@
+# captain-hook project policy
+# This file configures permission gating behavior for this repository.
+# Checked into git -- shared across all contributors.
+
+# Paths that default to "ask" regardless of role.
+# Writes to these paths always prompt a human, even for maintainer/troubleshooter roles.
+# Users can downgrade individual entries from "ask" to "allow" via overrides.
+sensitive_paths:
+  ask_write:
+    - ".claude/**"
+    - ".captain-hook/**"
+    - ".env*"
+    - "**/.env*"
+    - ".git/hooks/**"
+    - "**/secrets/**"
+    - "~/.claude/**"
+    - "~/.config/**"
+
+# Confidence thresholds per scope level.
+# Controls how often the human is interrupted.
+# Higher threshold = more human involvement, more conservative.
+# Lower threshold = more autonomous, trusts the LLM supervisor more.
+confidence:
+  org: 0.9       # High bar for org-wide auto-decisions
+  project: 0.7   # Moderate for project context
+  user: 0.6      # Lower for personal preferences
+
+# Similarity thresholds for Tier 2a (token Jaccard) and Tier 2b (embedding).
+similarity:
+  # Minimum Jaccard coefficient for token-level matching.
+  # Higher = stricter matching, fewer false positives.
+  jaccard_threshold: 0.7
+
+  # Minimum cosine similarity for embedding-based matching.
+  # Higher = stricter semantic matching.
+  embedding_threshold: 0.85
+
+  # Minimum token count for Jaccard comparison.
+  # Commands with fewer tokens skip directly to embedding tier.
+  jaccard_min_tokens: 3
+
+# Human decision timeout in seconds.
+# If no human responds within this window, the tool call is denied.
+human_timeout_secs: 60
+
+# Registration wait timeout in seconds.
+# How long to wait for an unregistered session to be registered
+# before blocking with instructions.
+registration_timeout_secs: 5
+
+# Supervisor backend configuration.
+# Options: "socket" (Claude Code subagent) or "api" (Anthropic API).
+supervisor:
+  backend: socket
+  # socket_path: null  # Default: /tmp/captain-hook-<team-id>.sock
+
+  # For API backend, uncomment and configure:
+  # backend: api
+  # api_base_url: https://api.anthropic.com
+  # model: claude-sonnet-4-5-20250929
+  # max_tokens: 1024

@@ -1,0 +1,315 @@
+# captain-hook role definitions
+# Checked into git -- shared across all contributors.
+#
+# Each role combines:
+# - A natural language description (used by the LLM supervisor at Tier 3)
+# - Deterministic path policies (enforced by globset at Tier 0)
+#
+# Projects can add custom roles or override built-in ones in this file.
+
+roles:
+
+  # ── Implementation Roles ────────────────────────────────────────────
+  # These roles write to specific code and configuration directories.
+
+  coder:
+    name: coder
+    description: |
+      Autonomous implementation specialist. Reads and modifies application
+      source code. Can run build tools and dev servers. Should not push
+      to git, publish packages, or modify CI config. Should not modify
+      test files -- that's the tester's job.
+    paths:
+      allow_write:
+        - "src/**"
+        - "lib/**"
+        - "Cargo.toml"
+        - "Cargo.lock"
+        - "package.json"
+        - "package-lock.json"
+        - "go.mod"
+        - "go.sum"
+        - "pyproject.toml"
+        - "requirements*.txt"
+      deny_write:
+        - "tests/**"
+        - "test-fixtures/**"
+        - "*.test.*"
+        - "*.spec.*"
+        - "*_test.go"
+        - "docs/**"
+        - ".github/**"
+        - ".gitlab-ci.yml"
+        - "*.tf"
+        - "*.tfvars"
+      allow_read:
+        - "**"
+
+  tester:
+    name: tester
+    description: |
+      Autonomous test engineer. Writes and runs tests, coverage tools,
+      and linters. Can read any source file for context. Should not
+      modify source code, push to git, or install packages. May use
+      Docker if docker-compose.test.yml exists.
+    paths:
+      allow_write:
+        - "tests/**"
+        - "test-fixtures/**"
+        - "*.test.*"
+        - "*.spec.*"
+        - "*_test.go"
+        - "test_*.py"
+        - "**/test_*.py"
+        - "**/*_test.go"
+        - "jest.config.*"
+        - "pytest.ini"
+        - "vitest.config.*"
+        - ".coveragerc"
+        - "codecov.yml"
+      deny_write:
+        - "src/**"
+        - "lib/**"
+        - "docs/**"
+        - ".github/**"
+        - "*.tf"
+      allow_read:
+        - "**"
+
+  integrator:
+    name: integrator
+    description: |
+      Infrastructure-as-code specialist. Manages terraform, pulumi,
+      CDK, ansible, and helm files. Thinks in terms of resources,
+      dependencies, state, and blast radius. Should not modify
+      application source or tests. NEVER runs terraform apply
+      without explicit human approval.
+    paths:
+      allow_write:
+        - "*.tf"
+        - "*.tfvars"
+        - "*.hcl"
+        - "terraform/**"
+        - "infra/**"
+        - "pulumi/**"
+        - "cdk/**"
+        - "cloudformation/**"
+        - "ansible/**"
+        - "helm/**"
+        - ".terraform.lock.hcl"
+      deny_write:
+        - "src/**"
+        - "lib/**"
+        - "tests/**"
+        - "docs/**"
+        - ".github/**"
+      allow_read:
+        - "**"
+
+  devops:
+    name: devops
+    description: |
+      CI/CD and deployment specialist. Manages pipelines, Dockerfiles,
+      tooling configuration, and developer environment. Should not
+      modify application source, tests, or documentation. NEVER
+      triggers a production deployment without explicit human approval.
+    paths:
+      allow_write:
+        - ".github/**"
+        - ".gitlab-ci.yml"
+        - ".circleci/**"
+        - "Jenkinsfile"
+        - ".buildkite/**"
+        - "Dockerfile*"
+        - "docker-compose*"
+        - ".dockerignore"
+        - "Makefile"
+        - ".eslintrc*"
+        - ".prettierrc*"
+        - ".editorconfig"
+        - "tsconfig*"
+        - ".*rc"
+        - ".*rc.*"
+        - ".tool-versions"
+        - ".nvmrc"
+        - ".python-version"
+        - ".ruby-version"
+        - "rust-toolchain.toml"
+        - "lefthook.yml"
+        - ".husky/**"
+        - ".pre-commit-config.yaml"
+      deny_write:
+        - "src/**"
+        - "lib/**"
+        - "tests/**"
+        - "docs/**"
+        - "*.tf"
+      allow_read:
+        - "**"
+
+  # ── Knowledge Roles ─────────────────────────────────────────────────
+  # These roles read the codebase and produce artifacts in docs/ subdirectories.
+  # They have narrow write access to their specific output directory only.
+
+  researcher:
+    name: researcher
+    description: |
+      Technical researcher and analyst. Gathers information, analyzes
+      codebases, investigates technologies, and produces structured
+      findings. Never writes code -- writes research reports to
+      docs/research/. Evidence-based: every claim cites a source
+      (file:line for code, URL for external).
+    paths:
+      allow_write:
+        - "docs/research/**"
+      deny_write:
+        - "src/**"
+        - "lib/**"
+        - "tests/**"
+        - ".github/**"
+        - "*.tf"
+      allow_read:
+        - "**"
+
+  architect:
+    name: architect
+    description: |
+      Senior software architect. Designs systems, evaluates tradeoffs,
+      and makes structural decisions. Writes design documents and ADRs
+      to docs/architecture/ and docs/adr/. Never writes implementation
+      code. This separation from coder prevents design bias toward
+      solutions that are easy to express in code.
+    paths:
+      allow_write:
+        - "docs/architecture/**"
+        - "docs/adr/**"
+      deny_write:
+        - "src/**"
+        - "lib/**"
+        - "tests/**"
+        - ".github/**"
+        - "*.tf"
+      allow_read:
+        - "**"
+
+  planner:
+    name: planner
+    description: |
+      Software architect and technical planner. Analyzes requirements,
+      explores the codebase, and produces detailed implementation plans
+      that other agents can execute without ambiguity. Never writes
+      code -- writes plan files to docs/plans/. Plans must be executable
+      by a stranger with zero context.
+    paths:
+      allow_write:
+        - "docs/plans/**"
+      deny_write:
+        - "src/**"
+        - "lib/**"
+        - "tests/**"
+        - ".github/**"
+        - "*.tf"
+      allow_read:
+        - "**"
+
+  reviewer:
+    name: reviewer
+    description: |
+      Senior code reviewer. Evaluates code changes for correctness,
+      maintainability, security, and adherence to project standards.
+      Does not write source code -- produces review artifacts in
+      docs/reviews/. Can run linters and static analysis tools.
+      Only reports issues with confidence >= 75/100 to prevent noise.
+    paths:
+      allow_write:
+        - "docs/reviews/**"
+      deny_write:
+        - "src/**"
+        - "lib/**"
+        - "tests/**"
+        - ".github/**"
+        - "*.tf"
+        - "docs/reviews/security/**"
+      allow_read:
+        - "**"
+
+  security-reviewer:
+    name: security-reviewer
+    description: |
+      Security-focused code reviewer. Identifies vulnerabilities,
+      insecure patterns, and compliance gaps. Reviews code through the
+      lens of an attacker. Can run security scanning tools via Bash
+      (cargo audit, npm audit, pip-audit, tfsec, checkov). Writes
+      findings to docs/reviews/security/. Classifies findings as
+      CRITICAL/HIGH/MEDIUM/LOW with attack vectors and remediations.
+    paths:
+      allow_write:
+        - "docs/reviews/security/**"
+      deny_write:
+        - "src/**"
+        - "lib/**"
+        - "tests/**"
+        - ".github/**"
+        - "*.tf"
+        - "docs/reviews/*.md"
+      allow_read:
+        - "**"
+
+  docs:
+    name: docs
+    description: |
+      Technical documentation specialist. Creates and maintains
+      documentation that is accurate, concise, and useful. Can read
+      any file for context. Should follow existing documentation
+      standards and formatting conventions. Verifies code examples
+      against actual source. Accuracy above all -- wrong documentation
+      is worse than no documentation.
+    paths:
+      allow_write:
+        - "docs/**"
+        - "*.md"
+        - "*.aisp"
+        - "CHANGELOG.md"
+        - "LICENSE"
+      deny_write:
+        - "src/**"
+        - "lib/**"
+        - "tests/**"
+        - ".github/**"
+        - "*.tf"
+      allow_read:
+        - "**"
+
+  # ── Full-Access Roles ───────────────────────────────────────────────
+  # These roles have unrestricted file access. Use for project leads,
+  # senior contributors, and debugging/incident response.
+
+  maintainer:
+    name: maintainer
+    description: |
+      Project maintainer -- final authority on code quality, release
+      readiness, and repository health. Full access to everything.
+      Can create/delete branches and tags, merge PRs, modify CI/CD,
+      update dependencies, create releases. Measure twice, cut once --
+      verify state before every irreversible action.
+    paths:
+      allow_write:
+        - "**"
+      deny_write: []
+      allow_read:
+        - "**"
+
+  troubleshooter:
+    name: troubleshooter
+    description: |
+      Autonomous debugging specialist. Full repository access for
+      diagnosing and fixing bugs, performance issues, and system
+      failures. Follows the scientific method: reproduce, isolate,
+      inspect, hypothesize, test, fix, verify, document. Should
+      document findings and minimize unnecessary changes.
+    paths:
+      allow_write:
+        - "**"
+      deny_write: []
+      allow_read:
+        - "**"

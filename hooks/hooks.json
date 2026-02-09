@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "user_prompt_submit": [
+      {
+        "matcher": ".*",
+        "command": "captain-hook session-check"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "command": "captain-hook check"
+      }
+    ]
+  }
+}
