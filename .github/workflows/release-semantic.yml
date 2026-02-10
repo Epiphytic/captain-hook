@@ -96,7 +96,13 @@ jobs:
             "https://api.github.com/repos/Epiphytic/plugin-marketplace/contents/marketplace.json")
 
           CURRENT_SHA=$(echo "$RESPONSE" | jq -r '.sha')
-          CONTENT=$(echo "$RESPONSE" | jq -r '.content' | base64 -d)
+          if [ "$CURRENT_SHA" = "null" ] || [ -z "$CURRENT_SHA" ]; then
+            echo "Failed to fetch marketplace.json: $RESPONSE"
+            exit 1
+          fi
+
+          # GitHub API returns base64 with embedded newlines — strip before decoding
+          CONTENT=$(echo "$RESPONSE" | jq -r '.content' | tr -d '\n' | base64 -d)
 
           # Update hookwise version using jq
           UPDATED=$(echo "$CONTENT" | jq --arg v "$NEW_VERSION" '
@@ -105,17 +111,19 @@ jobs:
             )
           ')
 
-          # Encode and push
+          # Encode and push — use jq to build JSON payload to avoid shell quoting issues
           ENCODED=$(echo "$UPDATED" | base64 -w 0)
+
+          PAYLOAD=$(jq -n \
+            --arg msg "chore: update hookwise to v${NEW_VERSION}" \
+            --arg content "$ENCODED" \
+            --arg sha "$CURRENT_SHA" \
+            '{message: $msg, content: $content, sha: $sha}')
 
           curl -sS -X PUT \
             -H "Authorization: token ${GH_TOKEN}" \
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/Epiphytic/plugin-marketplace/contents/marketplace.json" \
-            -d '{
-              "message": "chore: update hookwise to v'"${NEW_VERSION}"'",
-              "content": "'"${ENCODED}"'",
-              "sha": "'"${CURRENT_SHA}"'"
-            }'
+            -d "$PAYLOAD"
 
           echo "Updated plugin-marketplace to hookwise v${NEW_VERSION}"
