@@ -93,7 +93,7 @@ jobs:
           # Fetch current marketplace.json from plugin-marketplace
           RESPONSE=$(curl -sS -H "Authorization: token ${GH_TOKEN}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/Epiphytic/plugin-marketplace/contents/marketplace.json")
+            "https://api.github.com/repos/Epiphytic/plugin-marketplace/contents/.claude-plugin/marketplace.json")
 
           CURRENT_SHA=$(echo "$RESPONSE" | jq -r '.sha')
           if [ "$CURRENT_SHA" = "null" ] || [ -z "$CURRENT_SHA" ]; then
@@ -123,7 +123,7 @@ jobs:
           curl -sS -X PUT \
             -H "Authorization: token ${GH_TOKEN}" \
             -H "Accept: application/vnd.github.v3+json" \
-            "https://api.github.com/repos/Epiphytic/plugin-marketplace/contents/marketplace.json" \
+            "https://api.github.com/repos/Epiphytic/plugin-marketplace/contents/.claude-plugin/marketplace.json" \
             -d "$PAYLOAD"
 
           echo "Updated plugin-marketplace to hookwise v${NEW_VERSION}"
