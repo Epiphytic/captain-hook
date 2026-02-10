@@ -54,7 +54,7 @@ jobs:
 
   check-macos:
     name: ${{ matrix.job }} (macos)
-    runs-on: [self-hosted, captain-hook, macos]
+    runs-on: [self-hosted, hookwise, macos]
     strategy:
       fail-fast: false
       matrix:

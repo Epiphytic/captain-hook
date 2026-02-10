@@ -6,11 +6,11 @@ use std::pin::Pin;
 
 use tempfile::TempDir;
 
-use captain_hook::decision::{Decision, DecisionMetadata, DecisionTier};
-use captain_hook::error::Result as CHResult;
-use captain_hook::ipc::socket_client::IpcClient;
-use captain_hook::ipc::socket_server::IpcServer;
-use captain_hook::ipc::{IpcRequest, IpcResponse};
+use hookwise::decision::{Decision, DecisionMetadata, DecisionTier};
+use hookwise::error::Result as CHResult;
+use hookwise::ipc::socket_client::IpcClient;
+use hookwise::ipc::socket_server::IpcServer;
+use hookwise::ipc::{IpcRequest, IpcResponse};
 
 // ---------------------------------------------------------------------------
 // IPC message serialization
@@ -245,7 +245,7 @@ async fn ipc_server_handles_ask_response() {
 
 #[tokio::test]
 async fn ipc_client_nonexistent_socket_errors() {
-    let client = IpcClient::new(PathBuf::from("/tmp/nonexistent-captain-hook-test.sock"), 1);
+    let client = IpcClient::new(PathBuf::from("/tmp/nonexistent-hookwise-test.sock"), 1);
 
     let request = IpcRequest {
         session_id: "test".into(),
@@ -320,8 +320,8 @@ async fn ipc_multiple_sequential_requests() {
 
 #[test]
 fn pending_queue_serialization_roundtrip() {
-    use captain_hook::cascade::human::PendingDecision;
-    use captain_hook::ipc::pending_queue;
+    use hookwise::cascade::human::PendingDecision;
+    use hookwise::ipc::pending_queue;
     use chrono::Utc;
 
     let decisions = vec![

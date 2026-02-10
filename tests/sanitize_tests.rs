@@ -1,9 +1,9 @@
 //! Unit tests for the 3-layer sanitization pipeline.
 
-use captain_hook::sanitize::aho::AhoCorasickSanitizer;
-use captain_hook::sanitize::entropy::EntropySanitizer;
-use captain_hook::sanitize::regex_san::RegexSanitizer;
-use captain_hook::sanitize::{SanitizePipeline, Sanitizer};
+use hookwise::sanitize::aho::AhoCorasickSanitizer;
+use hookwise::sanitize::entropy::EntropySanitizer;
+use hookwise::sanitize::regex_san::RegexSanitizer;
+use hookwise::sanitize::{SanitizePipeline, Sanitizer};
 
 // ---------------------------------------------------------------------------
 // Layer 1: Aho-Corasick prefix matching

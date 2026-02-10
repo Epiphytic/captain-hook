@@ -1,4 +1,4 @@
-# captain-hook project policy
+# hookwise project policy
 # This file configures permission gating behavior for this repository.
 # Checked into git -- shared across all contributors.
 
@@ -8,7 +8,7 @@
 sensitive_paths:
   ask_write:
     - ".claude/**"
-    - ".captain-hook/**"
+    - ".hookwise/**"
     - ".env*"
     - "**/.env*"
     - ".git/hooks/**"
@@ -52,7 +52,7 @@ registration_timeout_secs: 5
 # Options: "socket" (Claude Code subagent) or "api" (Anthropic API).
 supervisor:
   backend: socket
-  # socket_path: null  # Default: /tmp/captain-hook-<team-id>.sock
+  # socket_path: null  # Default: /tmp/hookwise-<team-id>.sock
 
   # For API backend, uncomment and configure:
   # backend: api

@@ -11,7 +11,7 @@ use crate::storage::StorageBackend;
 /// Rebuild vector indexes from rules.
 pub async fn run_build() -> Result<()> {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let project_root = cwd.join(".captain-hook");
+    let project_root = cwd.join(".hookwise");
     let global_root = dirs_global();
     let policy = PolicyConfig::load_project(&cwd)?;
 
@@ -19,7 +19,7 @@ pub async fn run_build() -> Result<()> {
     let decisions = storage.load_decisions(ScopeLevel::Project)?;
 
     eprintln!(
-        "captain-hook: rebuilding indexes from {} decision(s)...",
+        "hookwise: rebuilding indexes from {} decision(s)...",
         decisions.len()
     );
 
@@ -45,14 +45,14 @@ pub async fn run_build() -> Result<()> {
         }
     }
 
-    eprintln!("captain-hook: index rebuild complete.");
+    eprintln!("hookwise: index rebuild complete.");
     Ok(())
 }
 
 /// Clear cached decisions.
 pub async fn run_invalidate(role: Option<&str>, scope: Option<&str>, all: bool) -> Result<()> {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let project_root = cwd.join(".captain-hook");
+    let project_root = cwd.join(".hookwise");
     let global_root = dirs_global();
 
     let storage = JsonlStorage::new(project_root, global_root, None);
@@ -60,7 +60,7 @@ pub async fn run_invalidate(role: Option<&str>, scope: Option<&str>, all: bool) 
     let scope_level = scope
         .map(|s| {
             s.parse::<ScopeLevel>()
-                .map_err(|e| crate::error::CaptainHookError::InvalidPolicy { reason: e })
+                .map_err(|e| crate::error::HookwiseError::InvalidPolicy { reason: e })
         })
         .transpose()?
         .unwrap_or(ScopeLevel::Project);
@@ -68,17 +68,17 @@ pub async fn run_invalidate(role: Option<&str>, scope: Option<&str>, all: bool) 
     if all {
         storage.invalidate_all(scope_level)?;
         eprintln!(
-            "captain-hook: cleared all decisions at scope '{}'",
+            "hookwise: cleared all decisions at scope '{}'",
             scope_level
         );
     } else if let Some(role) = role {
         storage.invalidate_role(scope_level, role)?;
         eprintln!(
-            "captain-hook: cleared decisions for role '{}' at scope '{}'",
+            "hookwise: cleared decisions for role '{}' at scope '{}'",
             role, scope_level
         );
     } else {
-        eprintln!("captain-hook: specify --role <role> or --all");
+        eprintln!("hookwise: specify --role <role> or --all");
         std::process::exit(1);
     }
 

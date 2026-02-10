@@ -1,4 +1,4 @@
-# captain-hook
+# hookwise
 
 Intelligent permission gating for Claude Code.
 
@@ -9,7 +9,7 @@ Intelligent permission gating for Claude Code.
 
 Claude Code's built-in permission system is per-session and binary: approve or deny each tool call, every time. In multi-agent environments -- agent teams, swarms, parallel workers -- this creates permission fatigue (hundreds of prompts) and zero institutional memory (every session starts cold).
 
-captain-hook solves both problems with a learned permission policy that gets smarter over time. It sits between Claude Code and your tools as a `PreToolUse` hook, running a fast decision cascade that resolves most tool calls in microseconds from cache. Only genuinely novel or ambiguous operations reach a human.
+hookwise solves both problems with a learned permission policy that gets smarter over time. It sits between Claude Code and your tools as a `PreToolUse` hook, running a fast decision cascade that resolves most tool calls in microseconds from cache. Only genuinely novel or ambiguous operations reach a human.
 
 Decisions are cached as sanitized JSONL, checked into git, and shared across contributors. New team members inherit the project's permission baseline on clone.
 
@@ -17,19 +17,19 @@ Decisions are cached as sanitized JSONL, checked into git, and shared across con
 
 ### From GitHub releases
 
-Download the prebuilt binary for your platform from the [latest release](https://github.com/epiphytic/captain-hook/releases/latest):
+Download the prebuilt binary for your platform from the [latest release](https://github.com/epiphytic/hookwise/releases/latest):
 
 ```bash
 # macOS (Apple Silicon)
-curl -L https://github.com/epiphytic/captain-hook/releases/latest/download/captain-hook-aarch64-apple-darwin.tar.gz \
+curl -L https://github.com/epiphytic/hookwise/releases/latest/download/hookwise-aarch64-apple-darwin.tar.gz \
   | tar xz -C /usr/local/bin
 
 # macOS (Intel)
-curl -L https://github.com/epiphytic/captain-hook/releases/latest/download/captain-hook-x86_64-apple-darwin.tar.gz \
+curl -L https://github.com/epiphytic/hookwise/releases/latest/download/hookwise-x86_64-apple-darwin.tar.gz \
   | tar xz -C /usr/local/bin
 
 # Linux (x86_64)
-curl -L https://github.com/epiphytic/captain-hook/releases/latest/download/captain-hook-x86_64-unknown-linux-gnu.tar.gz \
+curl -L https://github.com/epiphytic/hookwise/releases/latest/download/hookwise-x86_64-unknown-linux-gnu.tar.gz \
   | tar xz -C /usr/local/bin
 ```
 
@@ -45,7 +45,7 @@ Or build a release binary directly:
 
 ```bash
 cargo build --release
-# Binary at target/release/captain-hook
+# Binary at target/release/hookwise
 ```
 
 ### Install as a Claude Code plugin
@@ -53,15 +53,15 @@ cargo build --release
 After the binary is in your PATH, install the plugin:
 
 ```bash
-claude plugin add /path/to/captain-hook
+claude plugin add /path/to/hookwise
 ```
 
 This registers two hooks automatically:
 
-- **`PreToolUse`** -- runs `captain-hook check` on every tool call
-- **`UserPromptSubmit`** -- runs `captain-hook session-check` to prompt for role registration
+- **`PreToolUse`** -- runs `hookwise check` on every tool call
+- **`UserPromptSubmit`** -- runs `hookwise session-check` to prompt for role registration
 
-It also provides slash commands (`/captain-hook register`, `disable`, `enable`, `switch`, `status`).
+It also provides slash commands (`/hookwise register`, `disable`, `enable`, `switch`, `status`).
 
 ## Quick Start
 
@@ -69,19 +69,19 @@ It also provides slash commands (`/captain-hook register`, `disable`, `enable`, 
 
 ```bash
 cd your-repo
-captain-hook init
+hookwise init
 ```
 
-This creates `.captain-hook/` with default `policy.yml`, `roles.yml`, and empty rule files.
+This creates `.hookwise/` with default `policy.yml`, `roles.yml`, and empty rule files.
 
 ### Register a role
 
 ```bash
 # From a terminal
-captain-hook register --session-id "$SESSION_ID" --role coder
+hookwise register --session-id "$SESSION_ID" --role coder
 
 # Or via environment variable (CI/scripted use)
-export CAPTAIN_HOOK_ROLE=coder
+export HOOKWISE_ROLE=coder
 ```
 
 Once the plugin is installed, your first prompt will trigger an interactive role selection automatically.
@@ -159,12 +159,12 @@ Unrestricted file access for leads and debugging.
 Knowledge roles produce artifacts that implementation roles consume:
 `researcher` -> `architect` -> `planner` -> `coder`/`tester` -> `reviewer` -> `maintainer`
 
-Projects can define custom roles in `.captain-hook/roles.yml`.
+Projects can define custom roles in `.hookwise/roles.yml`.
 
 ## CLI Reference
 
 ```
-captain-hook <command> [options]
+hookwise <command> [options]
 ```
 
 ### Hook mode
@@ -173,7 +173,7 @@ Called by Claude Code on every `PreToolUse` event. Reads hook payload from stdin
 
 ```bash
 echo '{"session_id":"abc","tool_name":"Bash","tool_input":{"command":"pytest"}}' \
-  | captain-hook check
+  | hookwise check
 # {"hookSpecificOutput":{"permissionDecision":"allow"}}
 ```
 
@@ -182,60 +182,60 @@ echo '{"session_id":"abc","tool_name":"Bash","tool_input":{"command":"pytest"}}'
 Called on `UserPromptSubmit`. Outputs a registration prompt if the session is unregistered.
 
 ```bash
-captain-hook session-check
+hookwise session-check
 ```
 
 ### Registration
 
 ```bash
 # Register a session with a role
-captain-hook register --session-id <id> --role <role> \
+hookwise register --session-id <id> --role <role> \
   [--task <description>] [--prompt-file <path>]
 
-# Disable captain-hook for a session
-captain-hook disable --session-id <id>
+# Disable hookwise for a session
+hookwise disable --session-id <id>
 
 # Re-enable after disable
-captain-hook enable --session-id <id>
+hookwise enable --session-id <id>
 ```
 
 ### Queue mode (human interface)
 
 ```bash
 # List pending permission decisions
-captain-hook queue
+hookwise queue
 
 # Approve or deny a pending decision
-captain-hook approve <id>
-captain-hook deny <id>
+hookwise approve <id>
+hookwise deny <id>
 
 # Cache as "ask" instead of allow/deny
-captain-hook approve <id> --always-ask
+hookwise approve <id> --always-ask
 
 # Codify as a persistent rule
-captain-hook approve <id> --add-rule --scope project
+hookwise approve <id> --add-rule --scope project
 ```
 
 ### Monitoring
 
 ```bash
 # Stream decisions in real time
-captain-hook monitor
+hookwise monitor
 
 # View cache hit rates and decision distribution
-captain-hook stats
+hookwise stats
 ```
 
 ### Cache management
 
 ```bash
 # Rebuild vector indexes from rules
-captain-hook build
+hookwise build
 
 # Clear cached decisions
-captain-hook invalidate --role <role>
-captain-hook invalidate --scope project
-captain-hook invalidate --all
+hookwise invalidate --role <role>
+hookwise invalidate --scope project
+hookwise invalidate --all
 ```
 
 ### Overrides
@@ -243,19 +243,19 @@ captain-hook invalidate --all
 Set explicit permission overrides that take priority over cached LLM decisions.
 
 ```bash
-captain-hook override --role tester --command "docker compose up" --allow
-captain-hook override --role coder --tool Write --file ".claude/*" --ask
-captain-hook override --role coder --command "npm publish" --deny --scope project
+hookwise override --role tester --command "docker compose up" --allow
+hookwise override --role coder --tool Write --file ".claude/*" --ask
+hookwise override --role coder --command "npm publish" --deny --scope project
 ```
 
 ### Initialization and scanning
 
 ```bash
-# Initialize .captain-hook/ in a repo
-captain-hook init
+# Initialize .hookwise/ in a repo
+hookwise init
 
 # Pre-commit secret scan on staged files
-captain-hook scan --staged .captain-hook/rules/
+hookwise scan --staged .hookwise/rules/
 ```
 
 ## Configuration
@@ -268,7 +268,7 @@ Project-level policy: sensitive paths, confidence thresholds, and behavioral set
 sensitive_paths:
   ask_write:
     - ".claude/**"
-    - ".captain-hook/**"
+    - ".hookwise/**"
     - ".env*"
     - "**/.env*"
     - ".git/hooks/**"
@@ -298,7 +298,7 @@ roles:
 
 ```
 <repo>/
-  .captain-hook/
+  .hookwise/
     policy.yml              # Project policy (checked into git)
     roles.yml               # Role definitions (checked into git)
     rules/                  # Cached decisions (checked into git)
@@ -308,7 +308,7 @@ roles:
     .index/                 # Vector indexes (.gitignored, rebuilt locally)
     .user/                  # Personal preferences (.gitignored)
 
-~/.config/captain-hook/
+~/.config/hookwise/
   config.yml                # Global configuration
   org/<org-name>/           # Org-wide rules
   user/                     # Personal cross-project rules
@@ -322,92 +322,92 @@ Four scopes with strict precedence:
 
 | Scope | What it governs | Where it lives |
 |-------|-----------------|----------------|
-| Org | Security floor for all repos | `~/.config/captain-hook/org/<org>/` |
-| Project | Project-specific permissions | `<repo>/.captain-hook/rules/` |
-| User | Personal preferences | `~/.config/captain-hook/user/` |
+| Org | Security floor for all repos | `~/.config/hookwise/org/<org>/` |
+| Project | Project-specific permissions | `<repo>/.hookwise/rules/` |
+| User | Personal preferences | `~/.config/hookwise/user/` |
 | Role | Task-scoped least privilege | Set at registration time |
 
 **DENY > ASK > ALLOW** at every level. A deny at any scope is authoritative.
 
 ## Plugin Setup
 
-captain-hook ships as a Claude Code plugin. After building:
+hookwise ships as a Claude Code plugin. After building:
 
 ```bash
 cargo build --release
-claude plugin add /path/to/captain-hook
+claude plugin add /path/to/hookwise
 ```
 
 The plugin registers two hooks automatically:
 
-- **`PreToolUse`** -- runs `captain-hook check` on every tool call
-- **`UserPromptSubmit`** -- runs `captain-hook session-check` to prompt for role registration
+- **`PreToolUse`** -- runs `hookwise check` on every tool call
+- **`UserPromptSubmit`** -- runs `hookwise session-check` to prompt for role registration
 
 It also provides slash commands:
 
 | Command | Description |
 |---------|-------------|
-| `/captain-hook register` | Pick a role interactively |
-| `/captain-hook disable` | Opt out for this session |
-| `/captain-hook enable` | Re-enable after disable |
-| `/captain-hook switch` | Change role mid-session |
-| `/captain-hook status` | Show current role, path policy, cache stats |
+| `/hookwise register` | Pick a role interactively |
+| `/hookwise disable` | Opt out for this session |
+| `/hookwise enable` | Re-enable after disable |
+| `/hookwise switch` | Change role mid-session |
+| `/hookwise status` | Show current role, path policy, cache stats |
 
 ### Agent team setup
 
 In multi-agent environments, the team lead registers each worker after spawning:
 
 ```bash
-captain-hook register \
+hookwise register \
   --session-id "$WORKER_SESSION_ID" \
   --role tester \
   --task "Run pytest suite for auth module" \
-  --prompt-file /tmp/.captain-hook-prompt-$WORKER_SESSION_ID
+  --prompt-file /tmp/.hookwise-prompt-$WORKER_SESSION_ID
 ```
 
-The LLM supervisor agent communicates with worker hooks over a Unix domain socket at `/tmp/captain-hook-<team-id>.sock`.
+The LLM supervisor agent communicates with worker hooks over a Unix domain socket at `/tmp/hookwise-<team-id>.sock`.
 
 ## Troubleshooting
 
 ### Hook not firing
 
-If captain-hook is not intercepting tool calls:
+If hookwise is not intercepting tool calls:
 
-1. **Verify the plugin is installed**: Run `claude plugin list` and confirm `captain-hook` appears.
-2. **Check hooks.json**: The plugin directory should contain a `hooks.json` with `PreToolUse` and `UserPromptSubmit` entries. If missing, reinstall with `claude plugin add /path/to/captain-hook`.
-3. **Confirm the binary is in PATH**: Run `which captain-hook` -- if it returns nothing, add the install directory to your PATH.
-4. **Check for errors**: Run `captain-hook check` manually with sample input to see if the binary starts correctly:
+1. **Verify the plugin is installed**: Run `claude plugin list` and confirm `hookwise` appears.
+2. **Check hooks.json**: The plugin directory should contain a `hooks.json` with `PreToolUse` and `UserPromptSubmit` entries. If missing, reinstall with `claude plugin add /path/to/hookwise`.
+3. **Confirm the binary is in PATH**: Run `which hookwise` -- if it returns nothing, add the install directory to your PATH.
+4. **Check for errors**: Run `hookwise check` manually with sample input to see if the binary starts correctly:
    ```bash
    echo '{"session_id":"test","tool_name":"Bash","tool_input":{"command":"ls"}}' \
-     | captain-hook check
+     | hookwise check
    ```
 
 ### Session registration timeout
 
 If you see "session not registered" errors or the hook blocks after 5 seconds:
 
-1. **Use env var fallback**: Set `CAPTAIN_HOOK_ROLE=coder` (or your desired role) as an environment variable. This bypasses the interactive registration flow.
-2. **Check registration file permissions**: The registration state is stored under `.captain-hook/`. Ensure the current user has read/write access.
-3. **Register explicitly**: Run `captain-hook register --session-id "$SESSION_ID" --role <role>` before starting your session.
+1. **Use env var fallback**: Set `HOOKWISE_ROLE=coder` (or your desired role) as an environment variable. This bypasses the interactive registration flow.
+2. **Check registration file permissions**: The registration state is stored under `.hookwise/`. Ensure the current user has read/write access.
+3. **Register explicitly**: Run `hookwise register --session-id "$SESSION_ID" --role <role>` before starting your session.
 
 ### Permission denied on socket
 
-The LLM supervisor agent communicates over a Unix domain socket at `/tmp/captain-hook-<team-id>.sock`:
+The LLM supervisor agent communicates over a Unix domain socket at `/tmp/hookwise-<team-id>.sock`:
 
 1. **Check file permissions**: Ensure the socket file is readable/writable by the current user.
-2. **Stale socket**: If a previous session crashed, a stale socket may remain. Remove it manually: `rm /tmp/captain-hook-*.sock` and restart.
+2. **Stale socket**: If a previous session crashed, a stale socket may remain. Remove it manually: `rm /tmp/hookwise-*.sock` and restart.
 3. **tmpdir restrictions**: On some systems, `/tmp/` has restrictive permissions. Check your OS security settings (e.g., macOS sandboxing).
 
 ### Secret false positives
 
 If the sanitizer is flagging non-secret strings:
 
-1. **Adjust entropy threshold**: In `.captain-hook/policy.yml`, increase the Shannon entropy threshold above the default 4.0:
+1. **Adjust entropy threshold**: In `.hookwise/policy.yml`, increase the Shannon entropy threshold above the default 4.0:
    ```yaml
    sanitization:
      entropy_threshold: 4.5
    ```
-2. **Check what triggered it**: Run `captain-hook scan --staged` to see which patterns matched. The sanitizer uses three layers (aho-corasick prefixes, regex patterns, entropy) -- the output indicates which layer flagged the string.
+2. **Check what triggered it**: Run `hookwise scan --staged` to see which patterns matched. The sanitizer uses three layers (aho-corasick prefixes, regex patterns, entropy) -- the output indicates which layer flagged the string.
 3. **Add allowlist entries**: For known safe patterns that repeatedly trigger false positives, add them to the allowlist in `policy.yml`.
 
 ### Vector index needs rebuild
@@ -415,17 +415,17 @@ If the sanitizer is flagging non-secret strings:
 If similarity search returns stale or no results after editing rule files:
 
 ```bash
-captain-hook build
+hookwise build
 ```
 
-This rebuilds the HNSW index from the current JSONL rule files. The index is stored in `.captain-hook/.index/` (gitignored) and must be rebuilt locally after cloning or pulling new rules.
+This rebuilds the HNSW index from the current JSONL rule files. The index is stored in `.hookwise/.index/` (gitignored) and must be rebuilt locally after cloning or pulling new rules.
 
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Run `cargo test` and `cargo clippy` before submitting
-4. Ensure `captain-hook scan --staged` passes (no secrets in committed files)
+4. Ensure `hookwise scan --staged` passes (no secrets in committed files)
 5. Open a pull request
 
 ## License

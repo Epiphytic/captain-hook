@@ -1,10 +1,10 @@
 [package]
-name = "captain-hook"
+name = "hookwise"
 version = "0.2.0"
 edition = "2021"
 description = "Intelligent permission gating for AI coding assistants"
 license = "MIT"
-repository = "https://github.com/Epiphytic/captain-hook"
+repository = "https://github.com/Epiphytic/hookwise"
 keywords = ["claude-code", "gemini-cli", "permission", "hooks", "mcp"]
 categories = ["command-line-utilities", "development-tools"]
 

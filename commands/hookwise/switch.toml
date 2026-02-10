@@ -1,4 +1,4 @@
-prompt = """Use the captain_hook_register tool to switch this session's role to: {{args}}
+prompt = """Use the hookwise_register tool to switch this session's role to: {{args}}
 
 This will clear the current role's cached decisions and register the new role.
 

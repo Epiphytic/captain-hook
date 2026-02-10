@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use crate::error::Result;
 
-const GITHUB_REPO: &str = "Epiphytic/captain-hook";
+const GITHUB_REPO: &str = "Epiphytic/hookwise";
 const CURRENT_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 /// Run the `self-update` subcommand.
@@ -12,23 +12,23 @@ pub async fn run(check_only: bool) -> Result<()> {
     let latest_tag = latest.trim_start_matches('v');
 
     if latest_tag == CURRENT_VERSION {
-        println!("captain-hook {} is up to date.", CURRENT_VERSION);
+        println!("hookwise {} is up to date.", CURRENT_VERSION);
         return Ok(());
     }
 
     println!(
-        "captain-hook: update available {} -> {}",
+        "hookwise: update available {} -> {}",
         CURRENT_VERSION, latest_tag
     );
 
     if check_only {
-        println!("Run `captain-hook self-update` to install.");
+        println!("Run `hookwise self-update` to install.");
         return Ok(());
     }
 
     // Determine platform
     let target = detect_target()?;
-    let archive_name = format!("captain-hook-v{}-{}.tar.gz", latest_tag, target);
+    let archive_name = format!("hookwise-v{}-{}.tar.gz", latest_tag, target);
     let sha_name = format!("{}.sha256", archive_name);
 
     let base_url = format!(
@@ -92,7 +92,7 @@ pub async fn run(check_only: bool) -> Result<()> {
         .unpack(tmp_dir.path())
         .map_err(|e| io_err(format!("Failed to extract archive: {}", e)))?;
 
-    let extracted_binary = tmp_dir.path().join("captain-hook");
+    let extracted_binary = tmp_dir.path().join("hookwise");
     if !extracted_binary.exists() {
         return Err(io_err("Binary not found in archive".into()));
     }
@@ -123,7 +123,7 @@ pub async fn run(check_only: bool) -> Result<()> {
 
             // Remove backup
             let _ = std::fs::remove_file(&backup);
-            println!("captain-hook updated to v{}.", latest_tag);
+            println!("hookwise updated to v{}.", latest_tag);
         }
         Err(e) => {
             // Restore backup on failure
@@ -155,7 +155,7 @@ pub fn check_update_hint() {
                     let latest_tag = latest.trim_start_matches('v');
                     if latest_tag != CURRENT_VERSION {
                         eprintln!(
-                            "captain-hook: update available v{} -> v{} (run `captain-hook self-update`)",
+                            "hookwise: update available v{} -> v{} (run `hookwise self-update`)",
                             CURRENT_VERSION, latest_tag
                         );
                     }
@@ -183,7 +183,7 @@ pub fn check_update_hint() {
             let latest_tag = latest.trim_start_matches('v');
             if latest_tag != CURRENT_VERSION {
                 eprintln!(
-                    "captain-hook: update available v{} -> v{} (run `captain-hook self-update`)",
+                    "hookwise: update available v{} -> v{} (run `hookwise self-update`)",
                     CURRENT_VERSION, latest_tag
                 );
             }
@@ -198,14 +198,14 @@ struct UpdateCheck {
     current_version: String,
 }
 
-async fn fetch_latest_version() -> std::result::Result<String, crate::error::CaptainHookError> {
+async fn fetch_latest_version() -> std::result::Result<String, crate::error::HookwiseError> {
     let url = format!(
         "https://api.github.com/repos/{}/releases/latest",
         GITHUB_REPO
     );
 
     let client = reqwest::Client::builder()
-        .user_agent("captain-hook-updater")
+        .user_agent("hookwise-updater")
         .build()
         .map_err(|e| io_err(format!("HTTP client error: {}", e)))?;
 
@@ -228,7 +228,7 @@ async fn fetch_latest_version() -> std::result::Result<String, crate::error::Cap
         .ok_or_else(|| io_err("No tag_name in GitHub release".into()))
 }
 
-fn detect_target() -> std::result::Result<&'static str, crate::error::CaptainHookError> {
+fn detect_target() -> std::result::Result<&'static str, crate::error::HookwiseError> {
     #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
     {
         Ok("x86_64-unknown-linux-gnu")
@@ -243,12 +243,12 @@ fn detect_target() -> std::result::Result<&'static str, crate::error::CaptainHoo
     )))]
     {
         Err(io_err(
-            "Unsupported platform for self-update. Use `cargo install captain-hook` instead."
+            "Unsupported platform for self-update. Use `cargo install hookwise` instead."
                 .into(),
         ))
     }
 }
 
-fn io_err(msg: String) -> crate::error::CaptainHookError {
-    crate::error::CaptainHookError::Io(std::io::Error::other(msg))
+fn io_err(msg: String) -> crate::error::HookwiseError {
+    crate::error::HookwiseError::Io(std::io::Error::other(msg))
 }

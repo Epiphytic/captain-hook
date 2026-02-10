@@ -1,6 +1,6 @@
 use regex::RegexSet;
 
-use crate::error::CaptainHookError;
+use crate::error::HookwiseError;
 
 use super::Sanitizer;
 
@@ -13,13 +13,13 @@ pub struct RegexSanitizer {
 impl RegexSanitizer {
     /// Build from a list of regex pattern strings.
     pub fn new(patterns: Vec<String>) -> crate::error::Result<Self> {
-        let regex_set = RegexSet::new(&patterns).map_err(|e| CaptainHookError::InvalidPolicy {
+        let regex_set = RegexSet::new(&patterns).map_err(|e| HookwiseError::InvalidPolicy {
             reason: format!("invalid regex pattern: {e}"),
         })?;
         let compiled: Vec<regex::Regex> = patterns
             .iter()
             .map(|p| {
-                regex::Regex::new(p).map_err(|e| CaptainHookError::InvalidPolicy {
+                regex::Regex::new(p).map_err(|e| HookwiseError::InvalidPolicy {
                     reason: format!("invalid regex pattern: {e}"),
                 })
             })

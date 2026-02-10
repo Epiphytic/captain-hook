@@ -1,11 +1,11 @@
 ---
-name: captain-hook register
+name: hookwise register
 description: Register the current session with a role for permission gating
 ---
 
-# captain-hook register
+# hookwise register
 
-Register this session with a role. The role determines what file paths and tool calls are permitted without human approval. Each session must be registered before captain-hook will allow tool calls.
+Register this session with a role. The role determines what file paths and tool calls are permitted without human approval. Each session must be registered before hookwise will allow tool calls.
 
 ## Instructions
 
@@ -32,16 +32,16 @@ Register this session with a role. The role determines what file paths and tool 
    - `troubleshooter` -- full access for debugging
 
    **Other options:**
-   - `disable` -- turn off captain-hook for this session
+   - `disable` -- turn off hookwise for this session
 
 3. If the user chooses `disable`, run:
    ```bash
-   captain-hook disable --session-id "$SESSION_ID"
+   hookwise disable --session-id "$SESSION_ID"
    ```
 
 4. Otherwise, register with the chosen role:
    ```bash
-   captain-hook register --session-id "$SESSION_ID" --role <chosen-role>
+   hookwise register --session-id "$SESSION_ID" --role <chosen-role>
    ```
 
 5. Confirm the registration to the user, showing:

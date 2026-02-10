@@ -149,11 +149,11 @@ This makes decisions portable across projects with different directory structure
 - `categories:` section is optional. Existing `roles.yml` files without it work unchanged.
 - Roles can mix `{{category}}` references with raw globs.
 - Existing JSONL rules with raw paths continue to work. Normalization applies to new decisions only.
-- `captain-hook build` could optionally re-normalize old records in a future version.
+- `hookwise build` could optionally re-normalize old records in a future version.
 
 ### Security
 
-- `.captain-hook/**` is on the sensitive `ask_write` list, so `roles.yml` (containing categories) requires human approval to modify.
+- `.hookwise/**` is on the sensitive `ask_write` list, so `roles.yml` (containing categories) requires human approval to modify.
 - Category names validated at load time: `[a-z][a-z0-9_]*` only.
 - `PathNormalizer` derived from categories at load time — cannot be influenced by runtime tool input.
 
@@ -199,7 +199,7 @@ This makes decisions portable across projects with different directory structure
 
 ### Step 5: Update existing roles.yml
 
-**File**: `.captain-hook/roles.yml`
+**File**: `.hookwise/roles.yml`
 
 - Convert this project's roles.yml to use categories + macros
 

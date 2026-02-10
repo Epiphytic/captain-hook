@@ -15,7 +15,7 @@ pub async fn run_register(
     let cwd = std::env::current_dir().unwrap_or_else(|_| std::path::PathBuf::from("."));
     let roles = crate::config::RolesConfig::load_project(&cwd)?;
     if roles.get_role(role).is_none() {
-        eprintln!("captain-hook: unknown role '{}'. Available roles:", role);
+        eprintln!("hookwise: unknown role '{}'. Available roles:", role);
         for name in roles.roles.keys() {
             eprintln!("  - {}", name);
         }
@@ -24,28 +24,28 @@ pub async fn run_register(
 
     session_mgr.register(session_id, role, task, prompt_file)?;
     eprintln!(
-        "captain-hook: session {} registered as '{}'",
+        "hookwise: session {} registered as '{}'",
         session_id, role
     );
     Ok(())
 }
 
-/// Disable captain-hook for a session.
+/// Disable hookwise for a session.
 pub async fn run_disable(session_id: &str) -> Result<()> {
     let team_id = std::env::var("CLAUDE_TEAM_ID").ok();
     let session_mgr = SessionManager::new(team_id.as_deref());
 
     session_mgr.disable(session_id)?;
-    eprintln!("captain-hook: session {} disabled", session_id);
+    eprintln!("hookwise: session {} disabled", session_id);
     Ok(())
 }
 
-/// Re-enable captain-hook for a session.
+/// Re-enable hookwise for a session.
 pub async fn run_enable(session_id: &str) -> Result<()> {
     let team_id = std::env::var("CLAUDE_TEAM_ID").ok();
     let session_mgr = SessionManager::new(team_id.as_deref());
 
     session_mgr.enable(session_id)?;
-    eprintln!("captain-hook: session {} re-enabled", session_id);
+    eprintln!("hookwise: session {} re-enabled", session_id);
     Ok(())
 }

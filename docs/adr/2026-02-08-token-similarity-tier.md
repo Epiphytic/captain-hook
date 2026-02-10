@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-08
 **Status:** Accepted
-**Context:** Adding a fast, lightweight similarity check between the exact cache (Tier 1) and the embedding-based HNSW search (Tier 2b) in the captain-hook decision cascade.
+**Context:** Adding a fast, lightweight similarity check between the exact cache (Tier 1) and the embedding-based HNSW search (Tier 2b) in the hookwise decision cascade.
 
 ## Decision
 
@@ -130,7 +130,7 @@ These are structurally similar commands sharing most tokens:
 | `cargo test --lib -- auth` | `cargo test --lib -- api` | 0.75 | Yes |
 | `docker compose -f docker-compose.test.yml up db` | `docker compose -f docker-compose.test.yml up redis` | 0.90 | Yes |
 | `grep -rn "TODO" src/` | `grep -rn "FIXME" src/` | 0.71 | Yes |
-| `mkdir -p /tmp/captain-hook/cache` | `mkdir -p /tmp/captain-hook/index` | 0.75 | Yes |
+| `mkdir -p /tmp/hookwise/cache` | `mkdir -p /tmp/hookwise/index` | 0.75 | Yes |
 
 ### Needs embeddings (Tier 2b resolves)
 

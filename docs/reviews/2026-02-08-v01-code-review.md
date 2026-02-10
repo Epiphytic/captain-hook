@@ -1,4 +1,4 @@
-# Code Quality Review -- captain-hook v0.1
+# Code Quality Review -- hookwise v0.1
 
 **Date:** 2026-02-08
 **Reviewer:** code-reviewer (automated)
@@ -20,14 +20,14 @@ The codebase implements a 6-tier permission cascade for Claude Code tool calls. 
 #### C1. Queue CLI creates a new empty queue every invocation
 **File:** `src/cli/queue.rs:10-12`
 **Description:** `load_queue()` constructs a brand-new `DecisionQueue::new()` on every call. The `run_queue`, `run_approve`, and `run_deny` functions will never see pending decisions from the running `check` process because the queue is entirely in-memory (not shared via IPC or file).
-**Impact:** The `queue`, `approve`, and `deny` subcommands are non-functional. A user running `captain-hook approve <id>` will silently succeed but have no effect on the blocking `check` process.
-**Suggested fix:** The queue must be shared via the IPC socket. `approve`/`deny` CLI commands should send a message to the supervisor socket, which owns the actual `DecisionQueue`. Alternatively, use a file-backed queue under `/tmp/captain-hook-<team>-pending.json`.
+**Impact:** The `queue`, `approve`, and `deny` subcommands are non-functional. A user running `hookwise approve <id>` will silently succeed but have no effect on the blocking `check` process.
+**Suggested fix:** The queue must be shared via the IPC socket. `approve`/`deny` CLI commands should send a message to the supervisor socket, which owns the actual `DecisionQueue`. Alternatively, use a file-backed queue under `/tmp/hookwise-<team>-pending.json`.
 
 #### C2. Embedding tier full HNSW rebuild on every insert
 **File:** `src/cascade/embed_sim.rs:113-136`
 **Description:** `EmbeddingSimilarity::insert()` rebuilds the entire HNSW index from scratch on every new decision. `instant_distance::Builder::default().build(points, values)` is O(n log n). This is called from `CascadeRunner::persist_decision()` on every non-cache-hit tool call.
 **Impact:** As the decision corpus grows, every tool call that produces a new decision becomes progressively slower. At 1000+ decisions, this could add hundreds of milliseconds to the hot path.
-**Suggested fix:** Batch inserts and rebuild periodically (e.g., every N inserts or on `captain-hook build`), or use an incremental ANN index. The insert path should skip the rebuild and mark the index as stale.
+**Suggested fix:** Batch inserts and rebuild periodically (e.g., every N inserts or on `hookwise build`), or use an incremental ANN index. The insert path should skip the rebuild and mark the index as stale.
 
 ---
 
@@ -95,7 +95,7 @@ The codebase implements a 6-tier permission cascade for Claude Code tool calls. 
 - `src/cli/build.rs:87`
 - `src/cli/override_cmd.rs:87`
 
-**Description:** `HOME` env var fallback is `/tmp`. If `HOME` is unset (unusual but possible in containers), global config is read from `/tmp/.config/captain-hook/config.yml`. This is world-readable/writable on most systems.
+**Description:** `HOME` env var fallback is `/tmp`. If `HOME` is unset (unusual but possible in containers), global config is read from `/tmp/.config/hookwise/config.yml`. This is world-readable/writable on most systems.
 **Impact:** An attacker with access to `/tmp` could plant a malicious `config.yml` with a rogue supervisor socket path.
 **Suggested fix:** If HOME is unset, error out or use a secure fallback like the user's passwd entry (`dirs` crate).
 

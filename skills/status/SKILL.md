@@ -1,17 +1,17 @@
 ---
-name: captain-hook status
-description: Show the current session's captain-hook status and cache statistics
+name: hookwise status
+description: Show the current session's hookwise status and cache statistics
 ---
 
-# captain-hook status
+# hookwise status
 
-Display the current captain-hook status for this session, including role information, path policies, and cache statistics.
+Display the current hookwise status for this session, including role information, path policies, and cache statistics.
 
 ## Instructions
 
 1. Run:
    ```bash
-   captain-hook stats
+   hookwise stats
    ```
 
 2. Present the output to the user in a clear format, including:

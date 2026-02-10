@@ -30,7 +30,7 @@ pub async fn run(format: HookFormat) -> Result<()> {
     let _format = format; // format available for future use (e.g. Gemini-specific messaging)
 
     eprintln!(
-        "captain-hook: session {} is not registered.",
+        "hookwise: session {} is not registered.",
         input.session_id
     );
     eprintln!(
@@ -42,11 +42,11 @@ pub async fn run(format: HookFormat) -> Result<()> {
             .join(", ")
     );
     eprintln!(
-        "Register with: captain-hook register --session-id {} --role <ROLE>",
+        "Register with: hookwise register --session-id {} --role <ROLE>",
         input.session_id
     );
     eprintln!(
-        "Or disable: captain-hook disable --session-id {}",
+        "Or disable: hookwise disable --session-id {}",
         input.session_id
     );
 

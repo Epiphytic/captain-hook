@@ -2,7 +2,7 @@
 #
 # Self-Hosted GitHub Actions Runner Setup Script
 # ==============================================
-# This script configures and manages a self-hosted runner for the captain-hook repository.
+# This script configures and manages a self-hosted runner for the hookwise repository.
 # It is idempotent - running it multiple times will only perform necessary actions.
 #
 # Usage:
@@ -17,11 +17,11 @@
 #   uninstall          Remove the runner completely
 #
 # Options:
-#   --name NAME        Runner name (default: captain-hook-runner-<hostname>)
+#   --name NAME        Runner name (default: hookwise-runner-<hostname>)
 #   --labels LABELS    Comma-separated labels (default: auto-detected)
 #   --work-dir DIR     Work directory (default: _work)
 #   --token TOKEN      Runner registration token (auto-fetched via gh if not provided)
-#   --repo OWNER/REPO  Repository (default: Epiphytic/captain-hook)
+#   --repo OWNER/REPO  Repository (default: Epiphytic/hookwise)
 #   --help             Show this help message
 #
 # Prerequisites:
@@ -42,10 +42,10 @@ set -euo pipefail
 # Configuration
 # ============================================================================
 
-REPO="${GITHUB_RUNNER_REPO:-Epiphytic/captain-hook}"
+REPO="${GITHUB_RUNNER_REPO:-Epiphytic/hookwise}"
 REPO_URL="https://github.com/${REPO}"
 RUNNER_VERSION="${GITHUB_RUNNER_VERSION:-2.321.0}"
-RUNNER_NAME="${GITHUB_RUNNER_NAME:-captain-hook-runner-$(hostname -s)}"
+RUNNER_NAME="${GITHUB_RUNNER_NAME:-hookwise-runner-$(hostname -s)}"
 RUNNER_LABELS="${GITHUB_RUNNER_LABELS:-}"
 RUNNER_WORK_DIR="${GITHUB_RUNNER_WORK_DIR:-_work}"
 RUNNER_TOKEN="${GITHUB_RUNNER_TOKEN:-}"
@@ -161,7 +161,7 @@ generate_labels() {
 	local os="$1"
 	local arch="$2"
 
-	local labels="self-hosted,captain-hook"
+	local labels="self-hosted,hookwise"
 
 	case "$os" in
 	linux) labels="${labels},linux" ;;

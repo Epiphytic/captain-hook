@@ -27,20 +27,20 @@ pub async fn run(
     } else if ask {
         Decision::Ask
     } else {
-        eprintln!("captain-hook: must specify --allow, --deny, or --ask");
+        eprintln!("hookwise: must specify --allow, --deny, or --ask");
         std::process::exit(1);
     };
 
     let scope_level = scope
         .parse::<ScopeLevel>()
-        .map_err(|e| crate::error::CaptainHookError::InvalidPolicy { reason: e })?;
+        .map_err(|e| crate::error::HookwiseError::InvalidPolicy { reason: e })?;
 
     // Build the sanitized input from command/tool/file
     let sanitized_input = match (command, tool) {
         (Some(cmd), _) => cmd.to_string(),
         (None, Some(t)) => format!("tool:{}", t),
         (None, None) => {
-            eprintln!("captain-hook: must specify --command or --tool");
+            eprintln!("hookwise: must specify --command or --tool");
             std::process::exit(1);
         }
     };
@@ -71,14 +71,14 @@ pub async fn run(
     };
 
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let project_root = cwd.join(".captain-hook");
+    let project_root = cwd.join(".hookwise");
     let global_root = dirs_global();
 
     let storage = JsonlStorage::new(project_root, global_root, None);
     storage.save_decision(&record)?;
 
     eprintln!(
-        "captain-hook: override set -- {} {} for role '{}' at scope '{}'",
+        "hookwise: override set -- {} {} for role '{}' at scope '{}'",
         decision, tool_name, role, scope
     );
 

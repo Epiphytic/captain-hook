@@ -105,7 +105,7 @@ async fn run_config() -> Result<()> {
 
     // Show project config
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let project_config_path = cwd.join(".captain-hook").join("policy.yml");
+    let project_config_path = cwd.join(".hookwise").join("policy.yml");
 
     println!("\nProject config: {}", project_config_path.display());
     if project_config_path.exists() {
@@ -130,7 +130,7 @@ async fn run_config() -> Result<()> {
             policy.registration_timeout_secs
         );
     } else {
-        println!("  (not initialized -- run `captain-hook init`)");
+        println!("  (not initialized -- run `hookwise init`)");
     }
 
     Ok(())
@@ -138,7 +138,7 @@ async fn run_config() -> Result<()> {
 
 /// Pull latest org-level rules (placeholder).
 async fn run_sync() -> Result<()> {
-    eprintln!("captain-hook: sync is not yet implemented.");
+    eprintln!("hookwise: sync is not yet implemented.");
     eprintln!("Org-level rule syncing will be available in a future release.");
     Ok(())
 }

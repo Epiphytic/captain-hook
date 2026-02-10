@@ -15,7 +15,7 @@ pub async fn run(staged: bool, path: Option<&str>) -> Result<()> {
             .output()?;
 
         if !output.status.success() {
-            eprintln!("captain-hook: failed to get staged files (not a git repo?)");
+            eprintln!("hookwise: failed to get staged files (not a git repo?)");
             std::process::exit(1);
         }
 
@@ -23,11 +23,11 @@ pub async fn run(staged: bool, path: Option<&str>) -> Result<()> {
         let files: Vec<&str> = file_list.lines().filter(|l| !l.is_empty()).collect();
 
         if files.is_empty() {
-            eprintln!("captain-hook: no staged files to scan.");
+            eprintln!("hookwise: no staged files to scan.");
             return Ok(());
         }
 
-        eprintln!("captain-hook: scanning {} staged file(s)...", files.len());
+        eprintln!("hookwise: scanning {} staged file(s)...", files.len());
 
         for file in files {
             let findings = scan_file(&pipeline, file)?;
@@ -37,26 +37,26 @@ pub async fn run(staged: bool, path: Option<&str>) -> Result<()> {
         let path_buf = PathBuf::from(path);
         if path_buf.is_dir() {
             // Scan all files in directory recursively
-            eprintln!("captain-hook: scanning directory {}...", path);
+            eprintln!("hookwise: scanning directory {}...", path);
             total_findings += scan_dir(&pipeline, &path_buf)?;
         } else if path_buf.is_file() {
-            eprintln!("captain-hook: scanning file {}...", path);
+            eprintln!("hookwise: scanning file {}...", path);
             total_findings += scan_file(&pipeline, path)?;
         } else {
-            eprintln!("captain-hook: path not found: {}", path);
+            eprintln!("hookwise: path not found: {}", path);
             std::process::exit(1);
         }
     } else {
-        // Scan .captain-hook/rules/ by default
+        // Scan .hookwise/rules/ by default
         let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        let rules_dir = cwd.join(".captain-hook").join("rules");
+        let rules_dir = cwd.join(".hookwise").join("rules");
 
         if rules_dir.exists() {
-            eprintln!("captain-hook: scanning rules directory...");
+            eprintln!("hookwise: scanning rules directory...");
             total_findings += scan_dir(&pipeline, &rules_dir)?;
         } else {
             eprintln!(
-                "captain-hook: no .captain-hook/rules/ found. Use --staged or provide a path."
+                "hookwise: no .hookwise/rules/ found. Use --staged or provide a path."
             );
             std::process::exit(1);
         }
@@ -64,12 +64,12 @@ pub async fn run(staged: bool, path: Option<&str>) -> Result<()> {
 
     if total_findings > 0 {
         eprintln!(
-            "\ncaptain-hook: {} potential secret(s) found. Aborting.",
+            "\nhookwise: {} potential secret(s) found. Aborting.",
             total_findings
         );
         std::process::exit(1);
     } else {
-        eprintln!("captain-hook: scan clean -- no secrets detected.");
+        eprintln!("hookwise: scan clean -- no secrets detected.");
     }
 
     Ok(())

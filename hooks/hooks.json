@@ -3,13 +3,13 @@
     "user_prompt_submit": [
       {
         "matcher": ".*",
-        "command": "captain-hook session-check"
+        "command": "hookwise session-check"
       }
     ],
     "PreToolUse": [
       {
         "matcher": ".*",
-        "command": "captain-hook check"
+        "command": "hookwise check"
       }
     ]
   }

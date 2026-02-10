@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
-use crate::error::{CaptainHookError, Result};
+use crate::error::{HookwiseError, Result};
 
 /// Top-level project policy configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,15 +58,15 @@ impl PolicyConfig {
             return Ok(Self::default());
         }
         let contents = std::fs::read_to_string(path)?;
-        serde_yaml::from_str(&contents).map_err(|e| CaptainHookError::ConfigParse {
+        serde_yaml::from_str(&contents).map_err(|e| HookwiseError::ConfigParse {
             path: path.to_path_buf(),
             reason: e.to_string(),
         })
     }
 
-    /// Load policy from the project root. Checks `.captain-hook/policy.yml`.
+    /// Load policy from the project root. Checks `.hookwise/policy.yml`.
     pub fn load_project(project_root: &Path) -> Result<Self> {
-        let path = project_root.join(".captain-hook").join("policy.yml");
+        let path = project_root.join(".hookwise").join("policy.yml");
         Self::load_from(&path)
     }
 }
@@ -83,7 +83,7 @@ impl Default for SensitivePathConfig {
         Self {
             ask_write: vec![
                 ".claude/**".into(),
-                ".captain-hook/**".into(),
+                ".hookwise/**".into(),
                 ".env*".into(),
                 "**/.env*".into(),
                 ".git/hooks/**".into(),
@@ -151,7 +151,7 @@ impl Default for SupervisorConfig {
     }
 }
 
-/// Global captain-hook configuration from `~/.config/captain-hook/config.yml`.
+/// Global hookwise configuration from `~/.config/hookwise/config.yml`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalConfig {
     pub supervisor: SupervisorConfig,
@@ -169,7 +169,7 @@ impl GlobalConfig {
         }
         let contents = std::fs::read_to_string(&path)?;
         let config: Self =
-            serde_yaml::from_str(&contents).map_err(|e| CaptainHookError::ConfigParse {
+            serde_yaml::from_str(&contents).map_err(|e| HookwiseError::ConfigParse {
                 path: path.clone(),
                 reason: e.to_string(),
             })?;

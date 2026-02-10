@@ -1,11 +1,11 @@
-# Gemini Extension Support for captain-hook
+# Gemini Extension Support for hookwise
 
 **Date**: 2026-02-09
 **Status**: Approved
 
 ## Overview
 
-Add Gemini CLI extension support alongside the existing Claude Code plugin. The same `captain-hook` binary serves both ecosystems via a `--format` flag on the hook commands and a new MCP server subcommand for Gemini management tools.
+Add Gemini CLI extension support alongside the existing Claude Code plugin. The same `hookwise` binary serves both ecosystems via a `--format` flag on the hook commands and a new MCP server subcommand for Gemini management tools.
 
 ## Design Decisions
 
@@ -13,8 +13,8 @@ Add Gemini CLI extension support alongside the existing Claude Code plugin. The 
 2. **Hooks + MCP**: Hooks handle gating (BeforeTool), MCP server exposes management commands (register, status, queue, etc.) as tools the model can call.
 3. **Sibling directories**: `gemini-extension.json` at repo root alongside `.claude-plugin/`. Skills and agents are duplicated (not symlinked) — each system manages its own copy.
 4. **Native installation**: Claude installs via `claude plugin install`, Gemini via `gemini extensions install`. No custom file copying.
-5. **Binary self-update**: `captain-hook self-update` downloads latest release from GitHub. Periodic version check on the hot path (once/day, stderr warning).
-6. **Crate publication**: `cargo install captain-hook` as alternate install path.
+5. **Binary self-update**: `hookwise self-update` downloads latest release from GitHub. Periodic version check on the hot path (once/day, stderr warning).
+6. **Crate publication**: `cargo install hookwise` as alternate install path.
 
 ## Hook Protocol Differences
 
@@ -37,11 +37,11 @@ The `HookInput` struct accepts both formats via `#[serde(default)]` on extra fie
 | `gemini-extension.json` | Gemini extension manifest (MCP server + context file) |
 | `GEMINI.md` | Model context for Gemini (overview, MCP tools, role system) |
 | `hooks/gemini-hooks.json` | Gemini hook definitions (BeforeTool, BeforeAgent) |
-| `commands/captain-hook/register.toml` | Gemini slash command delegating to MCP tool |
-| `commands/captain-hook/disable.toml` | " |
-| `commands/captain-hook/enable.toml` | " |
-| `commands/captain-hook/switch.toml` | " |
-| `commands/captain-hook/status.toml` | " |
+| `commands/hookwise/register.toml` | Gemini slash command delegating to MCP tool |
+| `commands/hookwise/disable.toml` | " |
+| `commands/hookwise/enable.toml` | " |
+| `commands/hookwise/switch.toml` | " |
+| `commands/hookwise/status.toml` | " |
 | `src/cli/mcp_server.rs` | MCP stdio server exposing management tools via rmcp |
 | `src/cli/self_update.rs` | Binary self-update from GitHub releases |
 
@@ -68,12 +68,12 @@ The `HookInput` struct accepts both formats via `#[serde(default)]` on extra fie
 
 ```json
 {
-  "name": "captain-hook",
+  "name": "hookwise",
   "version": "0.1.1",
   "description": "Intelligent permission gating for AI coding assistants",
   "mcpServers": {
-    "captain-hook": {
-      "command": "captain-hook",
+    "hookwise": {
+      "command": "hookwise",
       "args": ["mcp-server"]
     }
   },
@@ -92,7 +92,7 @@ The `HookInput` struct accepts both formats via `#[serde(default)]` on extra fie
         "hooks": [{
           "name": "session-check",
           "type": "command",
-          "command": "captain-hook session-check --format gemini"
+          "command": "hookwise session-check --format gemini"
         }]
       }
     ],
@@ -102,7 +102,7 @@ The `HookInput` struct accepts both formats via `#[serde(default)]` on extra fie
         "hooks": [{
           "name": "permission-check",
           "type": "command",
-          "command": "captain-hook check --format gemini"
+          "command": "hookwise check --format gemini"
         }]
       }
     ]
@@ -114,13 +114,13 @@ The `HookInput` struct accepts both formats via `#[serde(default)]` on extra fie
 
 | MCP Tool | Maps to CLI | Purpose |
 |----------|-------------|---------|
-| `captain_hook_register` | `captain-hook register` | Register session with a role |
-| `captain_hook_disable` | `captain-hook disable` | Disable for session |
-| `captain_hook_enable` | `captain-hook enable` | Re-enable after disable |
-| `captain_hook_status` | `captain-hook stats` | Show role, cache stats, path policy |
-| `captain_hook_queue` | `captain-hook queue` | List pending decisions |
-| `captain_hook_approve` | `captain-hook approve` | Approve a pending decision |
-| `captain_hook_deny` | `captain-hook deny` | Deny a pending decision |
+| `hookwise_register` | `hookwise register` | Register session with a role |
+| `hookwise_disable` | `hookwise disable` | Disable for session |
+| `hookwise_enable` | `hookwise enable` | Re-enable after disable |
+| `hookwise_status` | `hookwise stats` | Show role, cache stats, path policy |
+| `hookwise_queue` | `hookwise queue` | List pending decisions |
+| `hookwise_approve` | `hookwise approve` | Approve a pending decision |
+| `hookwise_deny` | `hookwise deny` | Deny a pending decision |
 
 ## Installation
 
@@ -128,30 +128,30 @@ Three independent install paths, each using native tooling:
 
 **Binary** (standalone):
 ```bash
-captain-hook self-update          # auto-update from GitHub releases
-cargo install captain-hook        # alternate: from crates.io
+hookwise self-update          # auto-update from GitHub releases
+cargo install hookwise        # alternate: from crates.io
 ./scripts/install.sh              # alternate: bootstrap script
 ```
 
 **Claude plugin** (via Claude marketplace):
 ```bash
-claude plugin marketplace add /path/to/captain-hook   # or GitHub URL
-claude plugin install captain-hook@captain-hook-local
+claude plugin marketplace add /path/to/hookwise   # or GitHub URL
+claude plugin install hookwise@hookwise-local
 ```
 
 **Gemini extension** (via Gemini extension system):
 ```bash
-gemini extensions install /path/to/captain-hook   # or GitHub URL
+gemini extensions install /path/to/hookwise   # or GitHub URL
 ```
 
 ## Binary Auto-Update
 
 New `SelfUpdate` subcommand:
 
-- `captain-hook self-update --check` — query GitHub releases API, compare against compiled-in version
-- `captain-hook self-update` — download latest binary, verify SHA-256, replace in-place
+- `hookwise self-update --check` — query GitHub releases API, compare against compiled-in version
+- `hookwise self-update` — download latest binary, verify SHA-256, replace in-place
 
-Periodic background check: the `check` subcommand writes `~/.config/captain-hook/update-check.json` with last-checked timestamp. If >24h stale, prints stderr warning about available updates. Non-blocking.
+Periodic background check: the `check` subcommand writes `~/.config/hookwise/update-check.json` with last-checked timestamp. If >24h stale, prints stderr warning about available updates. Non-blocking.
 
 ## Dependency Addition
 

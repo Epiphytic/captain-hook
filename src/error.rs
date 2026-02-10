@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 #[derive(Debug, thiserror::Error)]
-pub enum CaptainHookError {
+pub enum HookwiseError {
     #[error("session not registered: {session_id}")]
     SessionNotRegistered { session_id: String },
 
@@ -63,4 +63,4 @@ pub enum CaptainHookError {
     Api { status: u16, body: String },
 }
 
-pub type Result<T> = std::result::Result<T, CaptainHookError>;
+pub type Result<T> = std::result::Result<T, HookwiseError>;

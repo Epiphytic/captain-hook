@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════════════════════
-# captain-hook End-to-End Tests
+# hookwise End-to-End Tests
 # ═══════════════════════════════════════════════════════════════════════
 #
 # Tests the full plugin lifecycle:
 #   1. Validates marketplace manifest
 #   2. Installs the plugin via Claude CLI (marketplace add + plugin install)
-#   3. Initializes captain-hook in a test project
+#   3. Initializes hookwise in a test project
 #   4. Registers sessions with various roles
 #   5. Simulates Claude Code tool calls and verifies hook decisions
 #   6. Cleans up and reports results
@@ -19,10 +19,10 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-E2E_DIR="$REPO_ROOT/captain-hook-e2e-tests"
-BINARY="$REPO_ROOT/target/release/captain-hook"
-MARKETPLACE_NAME="captain-hook-dev"
-PLUGIN_NAME="captain-hook"
+E2E_DIR="$REPO_ROOT/hookwise-e2e-tests"
+BINARY="$REPO_ROOT/target/release/hookwise"
+MARKETPLACE_NAME="hookwise-dev"
+PLUGIN_NAME="hookwise"
 
 PASS=0
 FAIL=0
@@ -62,7 +62,7 @@ skip() {
 header() { echo -e "\n${CYAN}${BOLD}═══ $1 ═══${NC}"; }
 
 # ── Helper: simulate a PreToolUse hook call ─────────────────────────
-# Pipes hook input JSON to `captain-hook check --format=gemini` and
+# Pipes hook input JSON to `hookwise check --format=gemini` and
 # returns the decision ("allow", "deny", or "ask").
 check_tool() {
 	local session_id="$1"
@@ -113,7 +113,7 @@ if [ "$SKIP_BUILD" = true ]; then
 		exit 1
 	fi
 else
-	echo "  Building captain-hook (release)..."
+	echo "  Building hookwise (release)..."
 	if cargo build --release --manifest-path "$REPO_ROOT/Cargo.toml" 2>&1 | tail -1; then
 		pass "cargo build --release"
 	else
@@ -204,8 +204,8 @@ if [ ! -d "$E2E_DIR/.git" ]; then
 	git -C "$E2E_DIR" init -q
 fi
 
-# Clean previous captain-hook state (but preserve .git and .claude)
-rm -rf "$E2E_DIR/.captain-hook"
+# Clean previous hookwise state (but preserve .git and .claude)
+rm -rf "$E2E_DIR/.hookwise"
 rm -rf "$E2E_DIR/src" "$E2E_DIR/tests" "$E2E_DIR/docs" "$E2E_DIR/lib"
 rm -f "$E2E_DIR/.env" "$E2E_DIR/.env.local" "$E2E_DIR/Cargo.toml"
 
@@ -223,27 +223,27 @@ echo 'SECRET=password123' >"$E2E_DIR/.env"
 echo '[package]' >"$E2E_DIR/Cargo.toml"
 pass "test project file structure created"
 
-# Initialize captain-hook
-echo "  Running captain-hook init..."
+# Initialize hookwise
+echo "  Running hookwise init..."
 (cd "$E2E_DIR" && "$BINARY" init 2>&1) || true
 
-if [ -f "$E2E_DIR/.captain-hook/policy.yml" ] && [ -f "$E2E_DIR/.captain-hook/roles.yml" ]; then
-	pass "captain-hook init created config files"
+if [ -f "$E2E_DIR/.hookwise/policy.yml" ] && [ -f "$E2E_DIR/.hookwise/roles.yml" ]; then
+	pass "hookwise init created config files"
 else
-	fail "captain-hook init failed to create config files"
+	fail "hookwise init failed to create config files"
 	echo -e "${RED}Cannot continue without config. Aborting.${NC}"
 	exit 1
 fi
 
 # Copy full roles.yml from project (init only generates coder/tester/maintainer)
-cp "$REPO_ROOT/.captain-hook/roles.yml" "$E2E_DIR/.captain-hook/roles.yml"
+cp "$REPO_ROOT/.hookwise/roles.yml" "$E2E_DIR/.hookwise/roles.yml"
 pass "copied full roles.yml (all 12 roles) to test project"
 
 # Reduce timeouts for fast testing
 if [[ "$OSTYPE" == "darwin"* ]]; then
-	sed -i '' 's/human_timeout_secs: 60/human_timeout_secs: 2/' "$E2E_DIR/.captain-hook/policy.yml"
+	sed -i '' 's/human_timeout_secs: 60/human_timeout_secs: 2/' "$E2E_DIR/.hookwise/policy.yml"
 else
-	sed -i 's/human_timeout_secs: 60/human_timeout_secs: 2/' "$E2E_DIR/.captain-hook/policy.yml"
+	sed -i 's/human_timeout_secs: 60/human_timeout_secs: 2/' "$E2E_DIR/.hookwise/policy.yml"
 fi
 pass "human_timeout_secs set to 2 for testing"
 
@@ -319,10 +319,10 @@ assert_decision \
 	"coder Write .env.local" "ask" \
 	"e2e-coder" "Write" '{"file_path":".env.local","content":"DB_HOST=localhost"}'
 
-# Coder should get ASK for .captain-hook/ (sensitive path)
+# Coder should get ASK for .hookwise/ (sensitive path)
 assert_decision \
-	"coder Write .captain-hook/roles.yml" "ask" \
-	"e2e-coder" "Write" '{"file_path":".captain-hook/roles.yml","content":"roles:"}'
+	"coder Write .hookwise/roles.yml" "ask" \
+	"e2e-coder" "Write" '{"file_path":".hookwise/roles.yml","content":"roles:"}'
 
 # ═══════════════════════════════════════════════════════════════════════
 # Phase 6: Hook Behavior Tests — Tester Role
@@ -477,11 +477,11 @@ else
 	fail "plugin.json missing"
 fi
 
-# Verify hooks/hooks.json exists and references captain-hook
-if [ -f "$REPO_ROOT/hooks/hooks.json" ] && grep -q "captain-hook" "$REPO_ROOT/hooks/hooks.json"; then
-	pass "hooks/hooks.json exists and references captain-hook"
+# Verify hooks/hooks.json exists and references hookwise
+if [ -f "$REPO_ROOT/hooks/hooks.json" ] && grep -q "hookwise" "$REPO_ROOT/hooks/hooks.json"; then
+	pass "hooks/hooks.json exists and references hookwise"
 else
-	fail "hooks/hooks.json missing or doesn't reference captain-hook"
+	fail "hooks/hooks.json missing or doesn't reference hookwise"
 fi
 
 # Verify skills exist
@@ -506,19 +506,19 @@ fi
 header "Phase 12: Category System Verification"
 
 # Verify the generated roles.yml uses {{macro}} syntax
-if grep -q '{{source}}' "$E2E_DIR/.captain-hook/roles.yml"; then
+if grep -q '{{source}}' "$E2E_DIR/.hookwise/roles.yml"; then
 	pass "generated roles.yml uses {{source}} macro"
 else
 	fail "generated roles.yml missing {{source}} macro"
 fi
 
-if grep -q '{{tests}}' "$E2E_DIR/.captain-hook/roles.yml"; then
+if grep -q '{{tests}}' "$E2E_DIR/.hookwise/roles.yml"; then
 	pass "generated roles.yml uses {{tests}} macro"
 else
 	fail "generated roles.yml missing {{tests}} macro"
 fi
 
-if grep -q '{{config_files}}' "$E2E_DIR/.captain-hook/roles.yml"; then
+if grep -q '{{config_files}}' "$E2E_DIR/.hookwise/roles.yml"; then
 	pass "generated roles.yml uses {{config_files}} macro"
 else
 	fail "generated roles.yml missing {{config_files}} macro"
@@ -535,8 +535,8 @@ if command -v claude &>/dev/null && [ "$SKIP_INSTALL" != true ]; then
 	pass "plugin uninstalled from test project"
 fi
 
-# Remove captain-hook state from test project
-rm -rf "$E2E_DIR/.captain-hook"
+# Remove hookwise state from test project
+rm -rf "$E2E_DIR/.hookwise"
 pass "test project cleaned up"
 
 # ═══════════════════════════════════════════════════════════════════════

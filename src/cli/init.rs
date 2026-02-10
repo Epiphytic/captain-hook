@@ -3,14 +3,14 @@ use std::path::PathBuf;
 
 use crate::error::Result;
 
-/// Initialize .captain-hook/ in the current repo.
+/// Initialize .hookwise/ in the current repo.
 pub async fn run() -> Result<()> {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let hook_dir = cwd.join(".captain-hook");
+    let hook_dir = cwd.join(".hookwise");
 
     if hook_dir.exists() {
         eprintln!(
-            "captain-hook: .captain-hook/ already exists in {}",
+            "hookwise: .hookwise/ already exists in {}",
             cwd.display()
         );
         return Ok(());
@@ -22,13 +22,13 @@ pub async fn run() -> Result<()> {
     fs::create_dir_all(hook_dir.join(".user"))?;
 
     // Write default policy.yml
-    let policy_content = r#"# captain-hook project policy
+    let policy_content = r#"# hookwise project policy
 # See docs for full configuration reference.
 
 sensitive_paths:
   ask_write:
     - ".claude/**"
-    - ".captain-hook/**"
+    - ".hookwise/**"
     - ".env*"
     - "**/.env*"
     - ".git/hooks/**"
@@ -55,7 +55,7 @@ supervisor:
     fs::write(hook_dir.join("policy.yml"), policy_content)?;
 
     // Write default roles.yml
-    let roles_content = r#"# captain-hook role definitions
+    let roles_content = r#"# hookwise role definitions
 # Each role has path policies and a description for the LLM supervisor.
 #
 # Categories define semantic path groups. Override them to match your project:
@@ -125,7 +125,7 @@ roles:
     fs::write(hook_dir.join("rules").join("ask.jsonl"), "")?;
 
     eprintln!(
-        "captain-hook: initialized .captain-hook/ in {}",
+        "hookwise: initialized .hookwise/ in {}",
         cwd.display()
     );
     eprintln!("  policy.yml  -- project policy (sensitive paths, thresholds)");

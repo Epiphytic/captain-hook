@@ -1,11 +1,11 @@
 # Bash Command Path Extraction Regexes
 
 **Date:** 2026-02-08
-**Purpose:** Regex patterns for extracting file paths from bash tool input in captain-hook's Tier 0 path policy evaluation
+**Purpose:** Regex patterns for extracting file paths from bash tool input in hookwise's Tier 0 path policy evaluation
 
 ## Overview
 
-When Claude Code invokes the `Bash` tool, captain-hook needs to extract file paths from the command string to evaluate them against role-based path policies. This is critical: a `coder` role should be denied `rm -rf tests/` even though they have bash access.
+When Claude Code invokes the `Bash` tool, hookwise needs to extract file paths from the command string to evaluate them against role-based path policies. This is critical: a `coder` role should be denied `rm -rf tests/` even though they have bash access.
 
 These patterns are designed for Rust's `regex` crate with named capture groups. They operate on the raw command string, not a parsed AST -- this is intentional for speed (~microsecond budget) at the cost of some edge cases.
 

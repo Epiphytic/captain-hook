@@ -69,7 +69,7 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{
               "token": "'"${OIDC_TOKEN}"'",
-              "identity": "captain-hook-release"
+              "identity": "hookwise-release"
             }')
           GH_TOKEN=$(echo "$RESPONSE" | jq -r '.access_token')
           echo "::add-mask::${GH_TOKEN}"
@@ -90,10 +90,10 @@ jobs:
           CURRENT_SHA=$(echo "$RESPONSE" | jq -r '.sha')
           CONTENT=$(echo "$RESPONSE" | jq -r '.content' | base64 -d)
 
-          # Update captain-hook version using jq
+          # Update hookwise version using jq
           UPDATED=$(echo "$CONTENT" | jq --arg v "$NEW_VERSION" '
             .plugins |= map(
-              if .name == "captain-hook" then .version = $v else . end
+              if .name == "hookwise" then .version = $v else . end
             )
           ')
 
@@ -105,9 +105,9 @@ jobs:
             -H "Accept: application/vnd.github.v3+json" \
             "https://api.github.com/repos/Epiphytic/plugin-marketplace/contents/marketplace.json" \
             -d '{
-              "message": "chore: update captain-hook to v'"${NEW_VERSION}"'",
+              "message": "chore: update hookwise to v'"${NEW_VERSION}"'",
               "content": "'"${ENCODED}"'",
               "sha": "'"${CURRENT_SHA}"'"
             }'
 
-          echo "Updated plugin-marketplace to captain-hook v${NEW_VERSION}"
+          echo "Updated plugin-marketplace to hookwise v${NEW_VERSION}"

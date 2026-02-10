@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use std::sync::LazyLock;
 
 use crate::config::{CompiledPathPolicy, PolicyConfig, RoleDefinition, RolesConfig};
-use crate::error::{CaptainHookError, Result};
+use crate::error::{HookwiseError, Result};
 
 /// In-memory session context, populated on first tool call from a session.
 #[derive(Debug, Clone)]
@@ -40,15 +40,15 @@ impl SessionManager {
         let suffix = team_id.unwrap_or("solo");
         let runtime_dir = runtime_dir();
         Self {
-            registration_file: runtime_dir.join(format!("captain-hook-{suffix}-sessions.json")),
-            exclusion_file: runtime_dir.join(format!("captain-hook-{suffix}-exclusions.json")),
+            registration_file: runtime_dir.join(format!("hookwise-{suffix}-sessions.json")),
+            exclusion_file: runtime_dir.join(format!("hookwise-{suffix}-exclusions.json")),
         }
     }
 
     /// Resolve a session's role. Checks in order:
     /// 1. In-memory cache (SESSIONS DashMap)
     /// 2. Registration file on disk
-    /// 3. CAPTAIN_HOOK_ROLE env var
+    /// 3. HOOKWISE_ROLE env var
     pub fn resolve_role(&self, session_id: &str) -> Result<Option<RoleDefinition>> {
         // 1. Check in-memory cache
         if let Some(ctx) = SESSIONS.get(session_id) {
@@ -65,7 +65,7 @@ impl SessionManager {
         }
 
         // 3. Check env var fallback
-        if let Ok(role_name) = std::env::var("CAPTAIN_HOOK_ROLE") {
+        if let Ok(role_name) = std::env::var("HOOKWISE_ROLE") {
             let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
             let roles = RolesConfig::load_project(&cwd)?;
             return Ok(roles.get_role(&role_name).cloned());
@@ -127,7 +127,7 @@ impl SessionManager {
             ctx.agent_prompt_hash = entry.prompt_hash.clone();
             ctx.agent_prompt_path = entry.prompt_path.as_ref().map(PathBuf::from);
             ctx.registered_at = Some(entry.registered_at);
-        } else if let Ok(role_name) = std::env::var("CAPTAIN_HOOK_ROLE") {
+        } else if let Ok(role_name) = std::env::var("HOOKWISE_ROLE") {
             // Env var fallback
             let cwd_path = PathBuf::from(cwd);
             let roles = RolesConfig::load_project(&cwd_path)?;
@@ -186,7 +186,7 @@ impl SessionManager {
         Ok(())
     }
 
-    /// Disable captain-hook for a session.
+    /// Disable hookwise for a session.
     pub fn disable(&self, session_id: &str) -> Result<()> {
         self.add_exclusion(session_id)?;
 
@@ -198,7 +198,7 @@ impl SessionManager {
         Ok(())
     }
 
-    /// Re-enable captain-hook for a session.
+    /// Re-enable hookwise for a session.
     pub fn enable(&self, session_id: &str) -> Result<()> {
         self.remove_exclusion(session_id)?;
 
@@ -251,7 +251,7 @@ impl SessionManager {
         }
 
         // Check env var fallback
-        std::env::var("CAPTAIN_HOOK_ROLE").is_ok()
+        std::env::var("HOOKWISE_ROLE").is_ok()
     }
 
     /// Check if a session is disabled.
@@ -282,7 +282,7 @@ impl SessionManager {
             }
 
             if start.elapsed() >= timeout {
-                return Err(CaptainHookError::RegistrationTimeout {
+                return Err(HookwiseError::RegistrationTimeout {
                     session_id: session_id.to_string(),
                     waited_secs: timeout_secs,
                 });

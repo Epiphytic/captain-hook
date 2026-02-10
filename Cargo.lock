@@ -329,40 +329,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1e748733b7cbc798e1434b6ac524f0c1ff2ab456fe201501e6497c8417a4fc33"
 
 [[package]]
-name = "captain-hook"
-version = "0.2.0"
-dependencies = [
- "aho-corasick",
- "anyhow",
- "assert_cmd",
- "async-trait",
- "chrono",
- "clap",
- "dashmap",
- "fastembed",
- "flate2",
- "globset",
- "instant-distance",
- "libc",
- "predicates",
- "regex",
- "reqwest",
- "rmcp",
- "schemars",
- "serde",
- "serde_json",
- "serde_yaml",
- "sha2",
- "tar",
- "tempfile",
- "thiserror",
- "tokio",
- "tokio-test",
- "tracing",
- "tracing-subscriber",
-]
-
-[[package]]
 name = "castaway"
 version = "0.2.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1188,6 +1154,40 @@ name = "hmac-sha256"
 version = "1.1.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0f0ae375a85536cac3a243e3a9cda80a47910348abdea7e2c22f8ec556d586d"
+
+[[package]]
+name = "hookwise"
+version = "0.2.0"
+dependencies = [
+ "aho-corasick",
+ "anyhow",
+ "assert_cmd",
+ "async-trait",
+ "chrono",
+ "clap",
+ "dashmap",
+ "fastembed",
+ "flate2",
+ "globset",
+ "instant-distance",
+ "libc",
+ "predicates",
+ "regex",
+ "reqwest",
+ "rmcp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "serde_yaml",
+ "sha2",
+ "tar",
+ "tempfile",
+ "thiserror",
+ "tokio",
+ "tokio-test",
+ "tracing",
+ "tracing-subscriber",
+]
 
 [[package]]
 name = "http"

@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# captain-hook installer
-# Downloads the captain-hook binary and sets up the Claude Code plugin.
-# https://github.com/Epiphytic/captain-hook
+# hookwise installer
+# Downloads the hookwise binary and sets up the Claude Code plugin.
+# https://github.com/Epiphytic/hookwise
 
 VERSION=""
 INSTALL_DIR="$HOME/.local/bin"
 SCOPE="user"
 SKIP_PLUGIN=false
 LOCAL_BINARY=""
-REPO="Epiphytic/captain-hook"
-PLUGIN_DIR="$HOME/.captain-hook/plugin"
+REPO="Epiphytic/hookwise"
+PLUGIN_DIR="$HOME/.hookwise/plugin"
 
 # ---------- Colors and output helpers ----------
 
@@ -36,9 +36,9 @@ step() { printf "\n${BOLD}==> %s${NC}\n" "$*"; }
 
 usage() {
 	cat <<'EOF'
-captain-hook installer
+hookwise installer
 
-Downloads the captain-hook binary from GitHub releases and sets up the
+Downloads the hookwise binary from GitHub releases and sets up the
 Claude Code plugin for permission gating.
 
 USAGE:
@@ -54,7 +54,7 @@ OPTIONS:
 
 EXAMPLES:
     # Install latest version
-    curl -fsSL https://raw.githubusercontent.com/Epiphytic/captain-hook/main/scripts/install.sh | bash
+    curl -fsSL https://raw.githubusercontent.com/Epiphytic/hookwise/main/scripts/install.sh | bash
 
     # Install a specific version
     ./scripts/install.sh --version 0.1.0
@@ -63,7 +63,7 @@ EXAMPLES:
     ./scripts/install.sh --install-dir /usr/local/bin --skip-plugin
 
     # Use a pre-built binary (CI/testing)
-    ./scripts/install.sh --binary ./target/release/captain-hook
+    ./scripts/install.sh --binary ./target/release/hookwise
 EOF
 	exit 0
 }
@@ -118,13 +118,13 @@ detect_platform() {
 	case "$os" in
 	Linux) os="linux" ;;
 	Darwin) os="darwin" ;;
-	*) fatal "Unsupported OS: $os. captain-hook supports Linux and macOS." ;;
+	*) fatal "Unsupported OS: $os. hookwise supports Linux and macOS." ;;
 	esac
 
 	case "$arch" in
 	x86_64 | amd64) arch="x86_64" ;;
 	aarch64 | arm64) arch="aarch64" ;;
-	*) fatal "Unsupported architecture: $arch. captain-hook supports x86_64 and aarch64." ;;
+	*) fatal "Unsupported architecture: $arch. hookwise supports x86_64 and aarch64." ;;
 	esac
 
 	case "${os}-${arch}" in
@@ -165,7 +165,7 @@ resolve_version() {
 download_binary() {
 	local version="$1"
 	local target="$2"
-	local archive="captain-hook-v${version}-${target}.tar.gz"
+	local archive="hookwise-v${version}-${target}.tar.gz"
 	local url="https://github.com/${REPO}/releases/download/v${version}/${archive}"
 	local sha_url="${url}.sha256"
 	local tmpdir
@@ -206,27 +206,27 @@ download_binary() {
 
 	# Find the binary in the extracted contents
 	local extracted_bin=""
-	if [[ -f "${tmpdir}/captain-hook" ]]; then
-		extracted_bin="${tmpdir}/captain-hook"
-	elif [[ -f "${tmpdir}/captain-hook-v${version}-${target}/captain-hook" ]]; then
-		extracted_bin="${tmpdir}/captain-hook-v${version}-${target}/captain-hook"
+	if [[ -f "${tmpdir}/hookwise" ]]; then
+		extracted_bin="${tmpdir}/hookwise"
+	elif [[ -f "${tmpdir}/hookwise-v${version}-${target}/hookwise" ]]; then
+		extracted_bin="${tmpdir}/hookwise-v${version}-${target}/hookwise"
 	else
 		# Search for it
-		extracted_bin="$(find "${tmpdir}" -name captain-hook -type f -perm +111 | head -1)" ||
-			fatal "Could not find captain-hook binary in the archive."
+		extracted_bin="$(find "${tmpdir}" -name hookwise -type f -perm +111 | head -1)" ||
+			fatal "Could not find hookwise binary in the archive."
 	fi
 
 	if [[ -z "$extracted_bin" ]]; then
-		fatal "Could not find captain-hook binary in the archive."
+		fatal "Could not find hookwise binary in the archive."
 	fi
 
 	# Install
 	mkdir -p "$INSTALL_DIR"
-	cp "$extracted_bin" "${INSTALL_DIR}/captain-hook"
-	chmod +x "${INSTALL_DIR}/captain-hook"
+	cp "$extracted_bin" "${INSTALL_DIR}/hookwise"
+	chmod +x "${INSTALL_DIR}/hookwise"
 
 	# Clean up trap already set
-	success "Installed captain-hook to ${INSTALL_DIR}/captain-hook"
+	success "Installed hookwise to ${INSTALL_DIR}/hookwise"
 }
 
 install_local_binary() {
@@ -238,9 +238,9 @@ install_local_binary() {
 		chmod +x "$src"
 	fi
 	mkdir -p "$INSTALL_DIR"
-	cp "$src" "${INSTALL_DIR}/captain-hook"
-	chmod +x "${INSTALL_DIR}/captain-hook"
-	success "Installed local binary to ${INSTALL_DIR}/captain-hook"
+	cp "$src" "${INSTALL_DIR}/hookwise"
+	chmod +x "${INSTALL_DIR}/hookwise"
+	success "Installed local binary to ${INSTALL_DIR}/hookwise"
 }
 
 # ---------- PATH setup ----------
@@ -281,7 +281,7 @@ ensure_path() {
 
 	info "Adding ${INSTALL_DIR} to PATH in ${rc_file}..."
 	echo "" >>"$rc_file"
-	echo "# Added by captain-hook installer" >>"$rc_file"
+	echo "# Added by hookwise installer" >>"$rc_file"
 	echo "$line_to_add" >>"$rc_file"
 	success "Updated ${rc_file}"
 	warn "Restart your shell or run: source ${rc_file}"
@@ -310,7 +310,7 @@ install_plugin() {
 	# -- .claude-plugin/plugin.json --
 	cat >"${PLUGIN_DIR}/.claude-plugin/plugin.json" <<PJSON
 {
-  "name": "captain-hook",
+  "name": "hookwise",
   "version": "${version}",
   "description": "Intelligent permission gating for Claude Code"
 }
@@ -321,15 +321,15 @@ PJSON
 	cat >"${PLUGIN_DIR}/.claude-plugin/marketplace.json" <<'MKTJSON'
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
-  "name": "captain-hook-local",
-  "description": "Local captain-hook plugin marketplace",
+  "name": "hookwise-local",
+  "description": "Local hookwise plugin marketplace",
   "owner": {
     "name": "Epiphytic",
-    "email": "captain-hook@epiphytic.dev"
+    "email": "hookwise@epiphytic.dev"
   },
   "plugins": [
     {
-      "name": "captain-hook",
+      "name": "hookwise",
       "description": "Intelligent permission gating for Claude Code",
       "source": "./"
     }
@@ -345,13 +345,13 @@ MKTJSON
     "user_prompt_submit": [
       {
         "matcher": ".*",
-        "command": "captain-hook session-check"
+        "command": "hookwise session-check"
       }
     ],
     "PreToolUse": [
       {
         "matcher": ".*",
-        "command": "captain-hook check"
+        "command": "hookwise check"
       }
     ]
   }
@@ -362,13 +362,13 @@ HOOKS
 	# -- skills/register/SKILL.md --
 	cat >"${PLUGIN_DIR}/skills/register/SKILL.md" <<'SKILLEOF'
 ---
-name: captain-hook register
+name: hookwise register
 description: Register the current session with a role for permission gating
 ---
 
-# captain-hook register
+# hookwise register
 
-Register this session with a role. The role determines what file paths and tool calls are permitted without human approval. Each session must be registered before captain-hook will allow tool calls.
+Register this session with a role. The role determines what file paths and tool calls are permitted without human approval. Each session must be registered before hookwise will allow tool calls.
 
 ## Instructions
 
@@ -395,13 +395,13 @@ Register this session with a role. The role determines what file paths and tool 
    - `troubleshooter` -- full access for debugging
 
    **Other options:**
-   - `disable` -- turn off captain-hook for this session
+   - `disable` -- turn off hookwise for this session
 
 3. If the user chooses `disable`, run:
-   captain-hook disable --session-id "$SESSION_ID"
+   hookwise disable --session-id "$SESSION_ID"
 
 4. Otherwise, register with the chosen role:
-   captain-hook register --session-id "$SESSION_ID" --role <chosen-role>
+   hookwise register --session-id "$SESSION_ID" --role <chosen-role>
 
 5. Confirm the registration to the user, showing:
    - The registered role name
@@ -413,25 +413,25 @@ SKILLEOF
 	# -- skills/disable/SKILL.md --
 	cat >"${PLUGIN_DIR}/skills/disable/SKILL.md" <<'SKILLEOF'
 ---
-name: captain-hook disable
-description: Disable captain-hook permission gating for this session
+name: hookwise disable
+description: Disable hookwise permission gating for this session
 ---
 
-# captain-hook disable
+# hookwise disable
 
-Disable captain-hook for the current session. When disabled, all tool calls are permitted without permission gating.
+Disable hookwise for the current session. When disabled, all tool calls are permitted without permission gating.
 
 ## Instructions
 
 1. Determine the session ID from the environment.
 
 2. Run:
-   captain-hook disable --session-id "$SESSION_ID"
+   hookwise disable --session-id "$SESSION_ID"
 
-3. Confirm to the user that captain-hook is disabled:
+3. Confirm to the user that hookwise is disabled:
    - All tool calls will be permitted without gating
    - No path policies or role restrictions will be enforced
-   - To re-enable: /captain-hook enable
+   - To re-enable: /hookwise enable
 
 4. If the command fails (e.g., session not found), report the error to the user.
 SKILLEOF
@@ -440,39 +440,39 @@ SKILLEOF
 	# -- skills/enable/SKILL.md --
 	cat >"${PLUGIN_DIR}/skills/enable/SKILL.md" <<'SKILLEOF'
 ---
-name: captain-hook enable
-description: Re-enable captain-hook permission gating for this session
+name: hookwise enable
+description: Re-enable hookwise permission gating for this session
 ---
 
-# captain-hook enable
+# hookwise enable
 
-Re-enable captain-hook for a session that was previously disabled.
+Re-enable hookwise for a session that was previously disabled.
 
 ## Instructions
 
 1. Determine the session ID from the environment.
 
 2. Run:
-   captain-hook enable --session-id "$SESSION_ID"
+   hookwise enable --session-id "$SESSION_ID"
 
 3. If the session was previously registered with a role, confirm re-enablement with:
    - The restored role name
    - The path policy summary for that role
 
-4. If the session was never registered with a role (only disabled), prompt the user to choose a role using the same flow as /captain-hook register.
+4. If the session was never registered with a role (only disabled), prompt the user to choose a role using the same flow as /hookwise register.
 
-5. If the session is not currently disabled, inform the user that captain-hook is already active and show the current role.
+5. If the session is not currently disabled, inform the user that hookwise is already active and show the current role.
 SKILLEOF
 	info "Created skills/enable/SKILL.md"
 
 	# -- skills/switch/SKILL.md --
 	cat >"${PLUGIN_DIR}/skills/switch/SKILL.md" <<'SKILLEOF'
 ---
-name: captain-hook switch
+name: hookwise switch
 description: Switch the current session to a different role
 ---
 
-# captain-hook switch
+# hookwise switch
 
 Change the role for the current session. This clears cached decisions for the old role and applies the new role's path policies.
 
@@ -480,12 +480,12 @@ Change the role for the current session. This clears cached decisions for the ol
 
 1. Determine the session ID from the environment.
 
-2. If the user provided a role name as an argument (e.g., /captain-hook switch docs), use it directly.
+2. If the user provided a role name as an argument (e.g., /hookwise switch docs), use it directly.
 
-3. If no role name was provided, present the available roles (same list as /captain-hook register) and ask the user to choose via AskUserQuestion.
+3. If no role name was provided, present the available roles (same list as /hookwise register) and ask the user to choose via AskUserQuestion.
 
 4. Run:
-   captain-hook register --session-id "$SESSION_ID" --role <new-role>
+   hookwise register --session-id "$SESSION_ID" --role <new-role>
 
 5. Confirm the role switch to the user, showing:
    - Previous role (if known)
@@ -498,18 +498,18 @@ SKILLEOF
 	# -- skills/status/SKILL.md --
 	cat >"${PLUGIN_DIR}/skills/status/SKILL.md" <<'SKILLEOF'
 ---
-name: captain-hook status
-description: Show the current session's captain-hook status and cache statistics
+name: hookwise status
+description: Show the current session's hookwise status and cache statistics
 ---
 
-# captain-hook status
+# hookwise status
 
-Display the current captain-hook status for this session, including role information, path policies, and cache statistics.
+Display the current hookwise status for this session, including role information, path policies, and cache statistics.
 
 ## Instructions
 
 1. Run:
-   captain-hook stats
+   hookwise stats
 
 2. Present the output to the user in a clear format, including:
    - Session ID: the current session identifier
@@ -527,17 +527,17 @@ SKILLEOF
 	# -- agents/supervisor.md (abbreviated) --
 	cat >"${PLUGIN_DIR}/agents/supervisor.md" <<'AGENTEOF'
 ---
-name: captain-hook-supervisor
-description: Permission evaluation supervisor agent for captain-hook
+name: hookwise-supervisor
+description: Permission evaluation supervisor agent for hookwise
 ---
 
-# captain-hook Supervisor Agent
+# hookwise Supervisor Agent
 
-You are the permission supervisor for a captain-hook agent team. Your role is to evaluate tool call permission requests from worker agents and make allow/deny/ask decisions based on the project's permission policy, role definitions, and task context.
+You are the permission supervisor for a hookwise agent team. Your role is to evaluate tool call permission requests from worker agents and make allow/deny/ask decisions based on the project's permission policy, role definitions, and task context.
 
-NOTE: This is an abbreviated version installed by the captain-hook installer.
-The full supervisor agent instructions are in the captain-hook repository at agents/supervisor.md.
-See: https://github.com/Epiphytic/captain-hook/blob/main/agents/supervisor.md
+NOTE: This is an abbreviated version installed by the hookwise installer.
+The full supervisor agent instructions are in the hookwise repository at agents/supervisor.md.
+See: https://github.com/Epiphytic/hookwise/blob/main/agents/supervisor.md
 AGENTEOF
 	info "Created agents/supervisor.md (abbreviated)"
 
@@ -551,7 +551,7 @@ register_plugin_with_claude() {
 	if ! command -v claude &>/dev/null; then
 		warn "Claude CLI not found in PATH."
 		echo ""
-		info "To use captain-hook as a Claude Code plugin, run Claude with:"
+		info "To use hookwise as a Claude Code plugin, run Claude with:"
 		echo "    claude --plugin-dir ${PLUGIN_DIR}"
 		echo ""
 		info "Or install the Claude CLI and re-run this script."
@@ -564,19 +564,19 @@ register_plugin_with_claude() {
 	# both live in .claude-plugin/). Register it as a marketplace, then install the plugin.
 
 	if claude plugin marketplace add "${PLUGIN_DIR}" 2>&1; then
-		success "Added captain-hook-local marketplace to Claude."
+		success "Added hookwise-local marketplace to Claude."
 	else
 		warn "Could not register marketplace with Claude CLI."
-		info "You can use captain-hook by running Claude with:"
+		info "You can use hookwise by running Claude with:"
 		echo "    claude --plugin-dir ${PLUGIN_DIR}"
 		return
 	fi
 
-	if claude plugin install "captain-hook@captain-hook-local" 2>&1; then
-		success "Installed captain-hook plugin via Claude CLI."
+	if claude plugin install "hookwise@hookwise-local" 2>&1; then
+		success "Installed hookwise plugin via Claude CLI."
 	else
 		warn "Could not install plugin via CLI. You can install it manually:"
-		echo "    claude plugin install captain-hook@captain-hook-local"
+		echo "    claude plugin install hookwise@hookwise-local"
 	fi
 }
 
@@ -585,16 +585,16 @@ register_plugin_with_claude() {
 verify_install() {
 	step "Verifying installation"
 
-	local bin="${INSTALL_DIR}/captain-hook"
+	local bin="${INSTALL_DIR}/hookwise"
 	if [[ ! -x "$bin" ]]; then
 		fatal "Binary not found or not executable at ${bin}"
 	fi
 
 	local ver_output
 	if ver_output="$("$bin" --version 2>&1)"; then
-		success "captain-hook is working: ${ver_output}"
+		success "hookwise is working: ${ver_output}"
 	else
-		warn "captain-hook binary exists but 'captain-hook --version' returned an error."
+		warn "hookwise binary exists but 'hookwise --version' returned an error."
 		warn "Output: ${ver_output}"
 		info "The binary may still work. Try: ${bin} --help"
 	fi
@@ -604,7 +604,7 @@ verify_install() {
 
 main() {
 	echo ""
-	printf "${BOLD}captain-hook installer${NC}\n"
+	printf "${BOLD}hookwise installer${NC}\n"
 	echo "=============================="
 	echo ""
 
@@ -638,7 +638,7 @@ main() {
 		local plugin_version="${VERSION:-}"
 		if [[ -z "$plugin_version" ]]; then
 			# Try to get version from the installed binary
-			plugin_version="$("${INSTALL_DIR}/captain-hook" --version 2>/dev/null |
+			plugin_version="$("${INSTALL_DIR}/hookwise" --version 2>/dev/null |
 				grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -1)" || true
 			if [[ -z "$plugin_version" ]]; then
 				plugin_version="0.0.0"
@@ -655,15 +655,15 @@ main() {
 	echo "=============================="
 	success "Installation complete!"
 	echo ""
-	info "Binary:  ${INSTALL_DIR}/captain-hook"
+	info "Binary:  ${INSTALL_DIR}/hookwise"
 	if [[ "$SKIP_PLUGIN" != "true" ]]; then
 		info "Plugin:  ${PLUGIN_DIR}/"
 	fi
 	echo ""
 	info "Next steps:"
-	echo "  1. Run 'captain-hook init' in your project to create .captain-hook/"
-	echo "  2. Start Claude Code -- captain-hook will prompt for role registration"
-	echo "  3. Use /captain-hook status to check your session"
+	echo "  1. Run 'hookwise init' in your project to create .hookwise/"
+	echo "  2. Start Claude Code -- hookwise will prompt for role registration"
+	echo "  3. Use /hookwise status to check your session"
 	echo ""
 }
 
