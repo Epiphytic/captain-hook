@@ -217,7 +217,7 @@ impl CascadeRunner {
         // 4. Update embedding similarity index (may fail if model not loaded)
         if let Err(e) = self.embedding_similarity.insert(record) {
             // Log but don't fail -- embedding index is optional
-            eprintln!("captain-hook: embedding index update failed: {}", e);
+            eprintln!("hookwise: embedding index update failed: {}", e);
         }
 
         Ok(())

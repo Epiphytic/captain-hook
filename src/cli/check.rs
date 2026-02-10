@@ -49,7 +49,7 @@ pub async fn run(format: HookFormat) -> Result<()> {
             .await
         {
             // Registration timeout — write deny JSON so callers always get valid output
-            eprintln!("captain-hook: {}", e);
+            eprintln!("hookwise: {}", e);
             hook_io::write_hook_output(Decision::Deny, format)?;
             std::process::exit(hook_io::deny_exit_code(format));
         }
@@ -64,7 +64,7 @@ pub async fn run(format: HookFormat) -> Result<()> {
     }
 
     // 4. Build cascade runner
-    let project_root = cwd_path.join(".captain-hook");
+    let project_root = cwd_path.join(".hookwise");
     let global_root = dirs_global();
 
     let storage = JsonlStorage::new(
@@ -95,7 +95,7 @@ pub async fn run(format: HookFormat) -> Result<()> {
                 Arc::new(es)
             }
             Err(e) => {
-                eprintln!("captain-hook: embedding tier unavailable, skipping ({})", e);
+                eprintln!("hookwise: embedding tier unavailable, skipping ({})", e);
                 Arc::new(EmbeddingSimilarity::new_noop())
             }
         };
@@ -105,7 +105,7 @@ pub async fn run(format: HookFormat) -> Result<()> {
         SupervisorConfig::Socket { socket_path } => {
             let sock_path = socket_path.clone().unwrap_or_else(|| {
                 let tid = team_id.as_deref().unwrap_or("solo");
-                PathBuf::from(format!("/tmp/captain-hook-{tid}.sock"))
+                PathBuf::from(format!("/tmp/hookwise-{tid}.sock"))
             });
             let backend = UnixSocketSupervisor::new(sock_path, 30);
             Box::new(SupervisorTier::new(Box::new(backend), policy.clone()))
@@ -156,7 +156,7 @@ pub async fn run(format: HookFormat) -> Result<()> {
         Err(e) => {
             // On cascade error (e.g. human timeout), default to deny
             // but still write output so callers can parse it.
-            eprintln!("captain-hook: cascade error, defaulting to deny ({})", e);
+            eprintln!("hookwise: cascade error, defaulting to deny ({})", e);
             hook_io::write_hook_output(Decision::Deny, format)?;
             std::process::exit(hook_io::deny_exit_code(format));
         }

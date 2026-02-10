@@ -5,7 +5,7 @@ use chrono::Utc;
 
 use crate::cascade::{CascadeInput, CascadeTier};
 use crate::decision::{CacheKey, Decision, DecisionMetadata, DecisionRecord, DecisionTier};
-use crate::error::{CaptainHookError, Result};
+use crate::error::{HookwiseError, Result};
 
 /// An entry in the HNSW index.
 #[derive(Debug, Clone)]
@@ -54,7 +54,7 @@ impl EmbeddingSimilarity {
     /// Create a new embedding similarity engine.
     pub fn new(_model_name: &str, threshold: f64) -> Result<Self> {
         let model = fastembed::TextEmbedding::try_new(Default::default()).map_err(|e| {
-            CaptainHookError::Embedding {
+            HookwiseError::Embedding {
                 reason: e.to_string(),
             }
         })?;
@@ -97,14 +97,14 @@ impl EmbeddingSimilarity {
         let model_mutex = self
             .model
             .as_ref()
-            .ok_or_else(|| CaptainHookError::Embedding {
+            .ok_or_else(|| HookwiseError::Embedding {
                 reason: "embedding model not available (noop tier)".into(),
             })?;
         let embeddings = {
             let mut model = model_mutex.lock().unwrap_or_else(|e| e.into_inner());
             model
                 .embed(texts, None)
-                .map_err(|e| CaptainHookError::Embedding {
+                .map_err(|e| HookwiseError::Embedding {
                     reason: e.to_string(),
                 })?
         };
@@ -200,20 +200,20 @@ impl EmbeddingSimilarity {
         let model_mutex = self
             .model
             .as_ref()
-            .ok_or_else(|| CaptainHookError::Embedding {
+            .ok_or_else(|| HookwiseError::Embedding {
                 reason: "embedding model not available (noop tier)".into(),
             })?;
         let mut model = model_mutex.lock().unwrap_or_else(|e| e.into_inner());
         let embeddings =
             model
                 .embed(vec![text], None)
-                .map_err(|e| CaptainHookError::Embedding {
+                .map_err(|e| HookwiseError::Embedding {
                     reason: e.to_string(),
                 })?;
         embeddings
             .into_iter()
             .next()
-            .ok_or_else(|| CaptainHookError::Embedding {
+            .ok_or_else(|| HookwiseError::Embedding {
                 reason: "no embedding returned".into(),
             })
     }

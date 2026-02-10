@@ -3,7 +3,7 @@
 
 use std::collections::HashMap;
 
-use captain_hook::config::roles::{default_categories, PathNormalizer, RolesConfig};
+use hookwise::config::roles::{default_categories, PathNormalizer, RolesConfig};
 
 // ---------------------------------------------------------------------------
 // default_categories()

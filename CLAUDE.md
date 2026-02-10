@@ -1,4 +1,4 @@
-# captain-hook
+# hookwise
 
 Intelligent permission gating for AI coding assistants. A Rust binary that works as both a Claude Code plugin and Gemini CLI extension, providing learned permission decisions across multi-session and multi-agent environments.
 
@@ -20,7 +20,7 @@ Tool call -> Sanitize -> Path Policy -> Cache -> Token Sim -> Embed Sim -> Super
 
 Similarity only auto-approves, never auto-denies. Similarity propagates `ask`. Timeout defaults to deny.
 
-Design document for more details: docs/captain-hook-design.md
+Design document for more details: docs/hookwise-design.md
 
 ## Tri-State Decision Model
 
@@ -39,7 +39,7 @@ Precedence: DENY > ASK > ALLOW > silent
 src/
   main.rs                     # CLI entry point (clap)
   lib.rs                      # Library root, re-exports
-  error.rs                    # CaptainHookError enum (thiserror)
+  error.rs                    # HookwiseError enum (thiserror)
   decision.rs                 # Decision, DecisionRecord, CacheKey, DecisionTier
   hook_io.rs                  # Hook input/output JSON types (stdin/stdout)
   config/
@@ -74,14 +74,14 @@ src/
     human.rs                  # Tier 4: file-backed pending queue
   cli/
     mod.rs                    # Subcommand dispatch
-    check.rs                  # `captain-hook check`: reads JSON from stdin
-    session_check.rs          # `captain-hook session-check`: registration prompt
+    check.rs                  # `hookwise check`: reads JSON from stdin
+    session_check.rs          # `hookwise session-check`: registration prompt
     register.rs               # register/disable/enable subcommands
     queue.rs                  # queue/approve/deny subcommands
     monitor.rs                # monitor/stats subcommands
     build.rs                  # build/invalidate subcommands
     override_cmd.rs           # override subcommand
-    init.rs                   # init subcommand (creates .captain-hook/)
+    init.rs                   # init subcommand (creates .hookwise/)
     scan.rs                   # scan --staged subcommand
   ipc/
     mod.rs                    # IPC types
@@ -97,7 +97,7 @@ tests/
   cascade_integration.rs      # Full cascade integration tests
   cli_integration.rs          # CLI binary invocation tests
   ipc_integration.rs          # Unix socket round-trip tests
-.captain-hook/                # Project-level config (checked into git)
+.hookwise/                # Project-level config (checked into git)
   policy.yml                  # Project policy, sensitive paths, thresholds
   roles.yml                   # Role definitions with path policies
   rules/                      # Cached decisions (sanitized JSONL)
@@ -115,14 +115,14 @@ skills/                       # Slash command skill definitions
 agents/
   supervisor.md               # Supervisor agent instructions
 docs/
-  captain-hook-design.md      # Full design specification
+  hookwise-design.md      # Full design specification
   adr/                        # Architecture decision records
   architecture/               # Module interfaces spec
   research/                   # Gitleaks patterns, bash path extraction
   reviews/                    # Code and security review reports
 ```
 
-Global config lives at `~/.config/captain-hook/`.
+Global config lives at `~/.config/hookwise/`.
 
 ## Roles
 
@@ -163,8 +163,8 @@ researcher -> architect -> planner -> coder/tester -> reviewer -> maintainer.
 Every session must register a role before tool calls are permitted. Three mechanisms:
 
 1. **Interactive** — `user_prompt_submit` hook prompts user via AskUserQuestion on first prompt
-2. **CLI** — `captain-hook register --session-id <id> --role <role>`
-3. **Env var fallback** — `CAPTAIN_HOOK_ROLE=coder` for CI/scripted use
+2. **CLI** — `hookwise register --session-id <id> --role <role>`
+3. **Env var fallback** — `HOOKWISE_ROLE=coder` for CI/scripted use
 
 Unregistered sessions: hook waits 5s for registration, then blocks with instructions.
 
@@ -180,7 +180,7 @@ Four layers, compiled at startup:
 All tool input is sanitized before any cache/vector/storage operation.
 
 ### Hook I/O
-The `captain-hook check` command reads JSON from **stdin** (matching Claude Code's hook protocol) and outputs JSON to stdout with `hookSpecificOutput` containing the `permissionDecision`.
+The `hookwise check` command reads JSON from **stdin** (matching Claude Code's hook protocol) and outputs JSON to stdout with `hookSpecificOutput` containing the `permissionDecision`.
 
 ### Path Policy (Tier 0)
 Deterministic globset matching per role. Runs before cache/vector/LLM. Hard gate — cannot be overridden by cached decisions or LLM. Sensitive paths (`.claude/**`, `.env*`, etc.) default to `ask` regardless of role.
@@ -189,29 +189,29 @@ Deterministic globset matching per role. Runs before cache/vector/LLM. Hard gate
 Token-level Jaccard similarity provides fast approximate matching (~500ns). Splits commands into tokens, computes set intersection/union ratio. Minimum 3-token threshold to avoid false matches on short commands.
 
 ### Embedding Similarity (Tier 2b)
-fastembed generates embeddings, instant-distance provides HNSW-indexed nearest neighbor search. Rebuilds full index via `captain-hook build`.
+fastembed generates embeddings, instant-distance provides HNSW-indexed nearest neighbor search. Rebuilds full index via `hookwise build`.
 
 ### Supervisor (Tier 3)
 Pluggable supervisor with two backends:
-- **Unix socket** — communicates with Claude Code subagent via `/tmp/captain-hook-<team-id>.sock`
+- **Unix socket** — communicates with Claude Code subagent via `/tmp/hookwise-<team-id>.sock`
 - **Anthropic API** — standalone mode using `ANTHROPIC_API_KEY` env var
 
 ### Human-in-the-Loop (Tier 4)
-File-backed decision queue at `/tmp/captain-hook-pending.json` (or `$XDG_RUNTIME_DIR/captain-hook-pending.json`). Enables cross-process communication between the hook binary and CLI approve/deny commands.
+File-backed decision queue at `/tmp/hookwise-pending.json` (or `$XDG_RUNTIME_DIR/hookwise-pending.json`). Enables cross-process communication between the hook binary and CLI approve/deny commands.
 
 ### Scope Hierarchy
 Deny > Ask > Allow. Precedence: Org > Project > User > Role.
 
 ### IPC
-Unix domain socket at `/tmp/captain-hook-<team-id>.sock` for supervisor agent communication.
+Unix domain socket at `/tmp/hookwise-<team-id>.sock` for supervisor agent communication.
 
 ## Slash Commands
 
-- `/captain-hook register` — pick a role interactively
-- `/captain-hook disable` — opt out for this session
-- `/captain-hook enable` — re-enable after disable
-- `/captain-hook switch` — change role mid-session
-- `/captain-hook status` — show current role, path policy, cache stats
+- `/hookwise register` — pick a role interactively
+- `/hookwise disable` — opt out for this session
+- `/hookwise enable` — re-enable after disable
+- `/hookwise switch` — change role mid-session
+- `/hookwise status` — show current role, path policy, cache stats
 
 ## Dependencies
 
@@ -236,15 +236,15 @@ Unix domain socket at `/tmp/captain-hook-<team-id>.sock` for supervisor agent co
 
 ## CLI Modes
 
-- **Hook mode**: `captain-hook check` — reads JSON from stdin, outputs permissionDecision JSON
-- **Session check**: `captain-hook session-check` — registration prompt for `user_prompt_submit` hook
-- **Queue mode**: `captain-hook queue/approve/deny` — human interface, supports `--always-ask`
-- **Registration**: `captain-hook register/disable/enable` — session management
-- **Monitor mode**: `captain-hook monitor/stats` — observe decisions, ask frequency
-- **Cache management**: `captain-hook build/invalidate` — rebuild indexes or clear decisions
-- **Overrides**: `captain-hook override --allow|--deny|--ask` — explicit per-role overrides
-- **Init**: `captain-hook init` — creates `.captain-hook/` directory in a repo
-- **Scan**: `captain-hook scan --staged` — pre-commit secret detection
+- **Hook mode**: `hookwise check` — reads JSON from stdin, outputs permissionDecision JSON
+- **Session check**: `hookwise session-check` — registration prompt for `user_prompt_submit` hook
+- **Queue mode**: `hookwise queue/approve/deny` — human interface, supports `--always-ask`
+- **Registration**: `hookwise register/disable/enable` — session management
+- **Monitor mode**: `hookwise monitor/stats` — observe decisions, ask frequency
+- **Cache management**: `hookwise build/invalidate` — rebuild indexes or clear decisions
+- **Overrides**: `hookwise override --allow|--deny|--ask` — explicit per-role overrides
+- **Init**: `hookwise init` — creates `.hookwise/` directory in a repo
+- **Scan**: `hookwise scan --staged` — pre-commit secret detection
 
 ## Building
 
@@ -257,11 +257,11 @@ cargo fmt --check
 
 ## Conventions
 
-- Binary name: `captain-hook`
-- Config directory: `.captain-hook/` in repos, `~/.config/captain-hook/` globally
-- Socket path: `/tmp/captain-hook-<team-id>.sock`
-- Pending queue: `/tmp/captain-hook-pending.json` or `$XDG_RUNTIME_DIR/captain-hook-pending.json`
+- Binary name: `hookwise`
+- Config directory: `.hookwise/` in repos, `~/.config/hookwise/` globally
+- Socket path: `/tmp/hookwise-<team-id>.sock`
+- Pending queue: `/tmp/hookwise-pending.json` or `$XDG_RUNTIME_DIR/hookwise-pending.json`
 - Rules are sanitized JSONL, checked into git, reviewable in PRs
 - Vector indexes and user preferences are gitignored (derived/local artifacts)
-- Pre-commit hook runs `captain-hook scan --staged` to prevent accidental secret commits
+- Pre-commit hook runs `hookwise scan --staged` to prevent accidental secret commits
 - Ships as a Claude Code plugin (binary + hooks + agent instructions + slash commands)

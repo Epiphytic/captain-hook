@@ -1,7 +1,7 @@
 # Module Interfaces Specification
 
 **Date:** 2026-02-08
-**Purpose:** Complete trait signatures, struct definitions, and enum variants for captain-hook. This is the contract all implementers code against.
+**Purpose:** Complete trait signatures, struct definitions, and enum variants for hookwise. This is the contract all implementers code against.
 
 ## Module Overview
 
@@ -9,7 +9,7 @@
 src/
 +-- lib.rs            # Public API re-exports
 +-- main.rs           # CLI entry point (clap)
-+-- error.rs          # CaptainHookError enum
++-- error.rs          # HookwiseError enum
 +-- decision.rs       # Decision, DecisionMetadata, DecisionRecord, CacheKey
 +-- config.rs         # PolicyConfig, ConfidenceConfig, RoleDefinition, PathPolicy, SimilarityConfig
 +-- sanitize.rs       # Sanitizer trait, SanitizePipeline, AhoCorasickSanitizer, RegexSanitizer, EntropySanitizer
@@ -35,7 +35,7 @@ src/
 use std::path::PathBuf;
 
 #[derive(Debug, thiserror::Error)]
-pub enum CaptainHookError {
+pub enum HookwiseError {
     #[error("session not registered: {session_id}")]
     SessionNotRegistered { session_id: String },
 
@@ -94,7 +94,7 @@ pub enum CaptainHookError {
     Api { status: u16, body: String },
 }
 
-pub type Result<T> = std::result::Result<T, CaptainHookError>;
+pub type Result<T> = std::result::Result<T, HookwiseError>;
 ```
 
 ---
@@ -213,7 +213,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 /// Top-level project policy configuration.
-/// Loaded from `.captain-hook/policy.yml` (project) or `~/.config/captain-hook/org/<org>/policy.yml` (org).
+/// Loaded from `.hookwise/policy.yml` (project) or `~/.config/hookwise/org/<org>/policy.yml` (org).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyConfig {
     /// Paths that default to `ask` regardless of role.
@@ -260,7 +260,7 @@ impl Default for SensitivePathConfig {
         Self {
             ask_write: vec![
                 ".claude/**".into(),
-                ".captain-hook/**".into(),
+                ".hookwise/**".into(),
                 ".env*".into(),
                 "**/.env*".into(),
                 ".git/hooks/**".into(),
@@ -324,7 +324,7 @@ pub enum SupervisorConfig {
     /// Unix socket supervisor (Claude Code subagent).
     #[serde(rename = "socket")]
     Socket {
-        /// Socket path. Default: `/tmp/captain-hook-<team-id>.sock`
+        /// Socket path. Default: `/tmp/hookwise-<team-id>.sock`
         socket_path: Option<PathBuf>,
     },
     /// API supervisor (standalone, Anthropic API).
@@ -389,7 +389,7 @@ pub struct RolesConfig {
     pub roles: HashMap<String, RoleDefinition>,
 }
 
-/// Global captain-hook configuration from `~/.config/captain-hook/config.yml`.
+/// Global hookwise configuration from `~/.config/hookwise/config.yml`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GlobalConfig {
     /// Default supervisor backend.
@@ -449,7 +449,7 @@ pub struct RegexSanitizer {
 
 impl RegexSanitizer {
     /// Build from a list of regex pattern strings.
-    pub fn new(patterns: Vec<String>) -> Result<Self, CaptainHookError>;
+    pub fn new(patterns: Vec<String>) -> Result<Self, HookwiseError>;
 }
 
 impl Sanitizer for RegexSanitizer {
@@ -518,19 +518,19 @@ pub trait StorageBackend: Send + Sync {
     fn save_decision(&self, record: &DecisionRecord) -> Result<()>;
 
     /// Delete all decisions for a specific role within a scope.
-    /// Used by `captain-hook invalidate --role <name>`.
+    /// Used by `hookwise invalidate --role <name>`.
     fn invalidate_role(&self, scope: ScopeLevel, role: &str) -> Result<()>;
 
     /// Delete all decisions within a scope.
-    /// Used by `captain-hook invalidate --all`.
+    /// Used by `hookwise invalidate --all`.
     fn invalidate_all(&self, scope: ScopeLevel) -> Result<()>;
 
     /// Rebuild the HNSW index from stored decisions.
-    /// Used by `captain-hook build`.
+    /// Used by `hookwise build`.
     fn rebuild_index(&self, scope: ScopeLevel) -> Result<()>;
 
     /// Scan stored decisions for secrets that may have bypassed sanitization.
-    /// Used by `captain-hook scan --staged`.
+    /// Used by `hookwise scan --staged`.
     fn scan_for_secrets(&self, path: &Path) -> Result<Vec<SecretFinding>>;
 }
 
@@ -548,13 +548,13 @@ pub struct SecretFinding {
 }
 
 /// JSONL-based storage implementation.
-/// Reads/writes `.captain-hook/rules/{allow,deny,ask}.jsonl` for project scope,
-/// `~/.config/captain-hook/org/<org>/rules/` for org scope,
-/// `~/.config/captain-hook/user/rules.jsonl` for user scope.
+/// Reads/writes `.hookwise/rules/{allow,deny,ask}.jsonl` for project scope,
+/// `~/.config/hookwise/org/<org>/rules/` for org scope,
+/// `~/.config/hookwise/user/rules.jsonl` for user scope.
 pub struct JsonlStorage {
-    /// Root directory for project-level storage (typically `<repo>/.captain-hook/`).
+    /// Root directory for project-level storage (typically `<repo>/.hookwise/`).
     project_root: std::path::PathBuf,
-    /// Root directory for global config (typically `~/.config/captain-hook/`).
+    /// Root directory for global config (typically `~/.config/hookwise/`).
     global_root: std::path::PathBuf,
     /// Organization name (derived from git remote).
     org_name: Option<String>,
@@ -691,7 +691,7 @@ pub struct SessionContext {
     /// When this session was registered.
     pub registered_at: Option<DateTime<Utc>>,
 
-    /// Whether captain-hook is disabled for this session.
+    /// Whether hookwise is disabled for this session.
     pub disabled: bool,
 }
 
@@ -703,8 +703,8 @@ pub static SESSIONS: LazyLock<DashMap<String, SessionContext>> =
 /// Manages session registration and lookup.
 pub struct SessionManager {
     /// Path to the registration file.
-    /// `/tmp/captain-hook-<team-id>-sessions.json` for teams,
-    /// `/tmp/captain-hook-solo-sessions.json` for solo.
+    /// `/tmp/hookwise-<team-id>-sessions.json` for teams,
+    /// `/tmp/hookwise-solo-sessions.json` for solo.
     registration_file: PathBuf,
 
     /// Path to the exclusion (disabled) file.
@@ -717,7 +717,7 @@ impl SessionManager {
     /// Resolve a session's role. Checks in order:
     /// 1. In-memory cache (SESSIONS DashMap)
     /// 2. Registration file on disk
-    /// 3. CAPTAIN_HOOK_ROLE env var
+    /// 3. HOOKWISE_ROLE env var
     /// Returns None if session is not registered.
     pub fn resolve_role(&self, session_id: &str) -> Result<Option<RoleDefinition>>;
 
@@ -735,10 +735,10 @@ impl SessionManager {
         prompt_file: Option<&str>,
     ) -> Result<()>;
 
-    /// Disable captain-hook for a session.
+    /// Disable hookwise for a session.
     pub fn disable(&self, session_id: &str) -> Result<()>;
 
-    /// Re-enable captain-hook for a session.
+    /// Re-enable hookwise for a session.
     pub fn enable(&self, session_id: &str) -> Result<()>;
 
     /// Switch a session's role. Clears the session's cache entries.
@@ -1554,7 +1554,7 @@ pub struct HookInput {
     pub permission_mode: Option<String>,
 }
 
-/// The JSON payload captain-hook outputs to stdout.
+/// The JSON payload hookwise outputs to stdout.
 ///
 /// Claude Code reads the `hookSpecificOutput.permissionDecision` field
 /// to determine whether to allow, deny, or ask about the tool call.
@@ -1611,7 +1611,7 @@ pub fn write_hook_output(output: &HookOutput) -> Result<()> {
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(name = "captain-hook")]
+#[command(name = "hookwise")]
 #[command(about = "Intelligent permission gating for Claude Code")]
 #[command(version)]
 pub struct Cli {
@@ -1646,13 +1646,13 @@ pub enum Commands {
         prompt_file: Option<String>,
     },
 
-    /// Disable captain-hook for a session.
+    /// Disable hookwise for a session.
     Disable {
         #[arg(long)]
         session_id: String,
     },
 
-    /// Re-enable captain-hook for a disabled session.
+    /// Re-enable hookwise for a disabled session.
     Enable {
         #[arg(long)]
         session_id: String,
@@ -1766,7 +1766,7 @@ pub enum Commands {
         path: Option<String>,
     },
 
-    /// Initialize .captain-hook/ in the current repo.
+    /// Initialize .hookwise/ in the current repo.
     Init,
 
     /// View/edit global configuration.
@@ -1801,7 +1801,7 @@ pub mod human;
 pub mod ipc;
 pub mod hook_io;
 
-pub use error::{CaptainHookError, Result};
+pub use error::{HookwiseError, Result};
 pub use decision::{Decision, DecisionMetadata, DecisionRecord, DecisionTier, CacheKey};
 pub use config::{PolicyConfig, RoleDefinition, CompiledPathPolicy};
 pub use session::{SessionContext, SessionManager};

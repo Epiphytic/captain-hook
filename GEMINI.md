@@ -1,18 +1,18 @@
-# captain-hook
+# hookwise
 
 Intelligent permission gating for AI coding assistants. Every tool call is evaluated through a 6-tier decision cascade before execution.
 
 ## Available MCP Tools
 
-Use these tools to manage captain-hook sessions and permissions:
+Use these tools to manage hookwise sessions and permissions:
 
-- **captain_hook_register** — Register this session with a role (coder, tester, devops, maintainer, etc.). Required before tool calls are permitted.
-- **captain_hook_disable** — Disable captain-hook for this session (all tools permitted).
-- **captain_hook_enable** — Re-enable captain-hook after disabling.
-- **captain_hook_status** — Show current role, path policies, cache stats, and sensitive paths.
-- **captain_hook_queue** — List pending permission decisions waiting for human approval.
-- **captain_hook_approve** — Approve a pending permission decision.
-- **captain_hook_deny** — Deny a pending permission decision.
+- **hookwise_register** — Register this session with a role (coder, tester, devops, maintainer, etc.). Required before tool calls are permitted.
+- **hookwise_disable** — Disable hookwise for this session (all tools permitted).
+- **hookwise_enable** — Re-enable hookwise after disabling.
+- **hookwise_status** — Show current role, path policies, cache stats, and sensitive paths.
+- **hookwise_queue** — List pending permission decisions waiting for human approval.
+- **hookwise_approve** — Approve a pending permission decision.
+- **hookwise_deny** — Deny a pending permission decision.
 
 ## Role System
 

@@ -1,7 +1,7 @@
 //! Unit tests for the exact cache (Tier 1) and its tri-state behavior.
 
-use captain_hook::cascade::cache::ExactCache;
-use captain_hook::decision::{
+use hookwise::cascade::cache::ExactCache;
+use hookwise::decision::{
     CacheKey, Decision, DecisionMetadata, DecisionRecord, DecisionTier, ScopeLevel,
 };
 use chrono::Utc;

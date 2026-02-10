@@ -111,7 +111,7 @@ fn flock_exclusive(file: &fs::File) -> Result<()> {
     // LOCK_EX = 2 (exclusive lock)
     let ret = unsafe { libc::flock(fd, libc::LOCK_EX) };
     if ret != 0 {
-        return Err(crate::error::CaptainHookError::Io(
+        return Err(crate::error::HookwiseError::Io(
             std::io::Error::last_os_error(),
         ));
     }

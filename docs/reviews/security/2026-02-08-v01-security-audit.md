@@ -1,4 +1,4 @@
-# Security Audit: captain-hook v0.1
+# Security Audit: hookwise v0.1
 
 **Date:** 2026-02-08
 **Reviewer:** security-reviewer (automated)
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-captain-hook is a security-critical permission gating system for Claude Code. This audit reviewed all Rust source files across the sanitization pipeline, permission model, cascade engine, IPC layer, session management, storage, and CLI. The codebase is generally well-structured with clear separation of concerns. However, several security-relevant issues were identified, primarily around the sanitization pipeline's bypass vectors, file-based state management in `/tmp`, and the path policy engine's bash command parsing limitations.
+hookwise is a security-critical permission gating system for Claude Code. This audit reviewed all Rust source files across the sanitization pipeline, permission model, cascade engine, IPC layer, session management, storage, and CLI. The codebase is generally well-structured with clear separation of concerns. However, several security-relevant issues were identified, primarily around the sanitization pipeline's bypass vectors, file-based state management in `/tmp`, and the path policy engine's bash command parsing limitations.
 
 **Finding summary:**
 - CRITICAL: 2
@@ -157,10 +157,10 @@ The documented precedence is "Org > Project > User > Role", meaning an Org-level
 **Affected file:** `src/cascade/cache.rs:107-124`
 **Description:** When the exact cache hits an `ask` entry, it returns a `DecisionRecord` with `decision: Decision::Ask`. This is correct -- the design says `ask` should always prompt. However, the `CascadeRunner` at `src/cascade/mod.rs:90-115` treats any returned record as a final resolution. The `ask` decision will be output to Claude Code, which will prompt the human. This part is correct.
 
-However, the exact cache does not distinguish between "this was originally `ask` from the human" vs. "this was `ask` from a sensitive path default." Both are cached and replayed. The human does not have an opportunity to change their mind on an `ask` entry without running `captain-hook invalidate`. This is by design per the specification but worth noting for operational security: once `ask` is set, the only way to convert it to `allow`/`deny` is through cache invalidation, not through the normal human approval flow.
+However, the exact cache does not distinguish between "this was originally `ask` from the human" vs. "this was `ask` from a sensitive path default." Both are cached and replayed. The human does not have an opportunity to change their mind on an `ask` entry without running `hookwise invalidate`. This is by design per the specification but worth noting for operational security: once `ask` is set, the only way to convert it to `allow`/`deny` is through cache invalidation, not through the normal human approval flow.
 
 **Remediation:**
-- Consider adding a `captain-hook promote` command that allows converting an `ask` entry to `allow` or `deny` without full invalidation.
+- Consider adding a `hookwise promote` command that allows converting an `ask` entry to `allow` or `deny` without full invalidation.
 - Document this behavior clearly.
 
 ---
@@ -173,11 +173,11 @@ However, the exact cache does not distinguish between "this was originally `ask`
 
 **Severity:** HIGH
 **Affected files:** `src/session/mod.rs:42-48`, `src/session/registration.rs:23-45`
-**Description:** Session registration files and exclusion files are stored in `/tmp/captain-hook-{team_id}-sessions.json` and `/tmp/captain-hook-{team_id}-exclusions.json`. On most Unix systems, `/tmp` is world-readable. These files:
+**Description:** Session registration files and exclusion files are stored in `/tmp/hookwise-{team_id}-sessions.json` and `/tmp/hookwise-{team_id}-exclusions.json`. On most Unix systems, `/tmp` is world-readable. These files:
 
 1. **Contain session IDs** -- an attacker with local access can discover active sessions.
 2. **Are world-writable** (depending on umask) -- an attacker can inject registration entries, registering a malicious session as `maintainer` role.
-3. **Are subject to symlink attacks** -- an attacker can create a symlink at the expected path before captain-hook starts, potentially redirecting writes.
+3. **Are subject to symlink attacks** -- an attacker can create a symlink at the expected path before hookwise starts, potentially redirecting writes.
 4. **No file locking** -- concurrent writes can corrupt the JSON, causing parse failures.
 
 **Attack vectors:**
@@ -197,7 +197,7 @@ However, the exact cache does not distinguish between "this was originally `ask`
 
 **Severity:** MEDIUM
 **Affected files:** `src/ipc/socket_server.rs:36-47`, `src/cascade/supervisor.rs:44-56`
-**Description:** The Unix domain socket at `/tmp/captain-hook-{team-id}.sock` is created with default permissions (typically 0755 or per-umask). Any local user can connect to this socket and send supervisor requests.
+**Description:** The Unix domain socket at `/tmp/hookwise-{team-id}.sock` is created with default permissions (typically 0755 or per-umask). Any local user can connect to this socket and send supervisor requests.
 
 **Attack vector:**
 - A local attacker connects to the socket and sends crafted `IpcRequest` messages, potentially:
@@ -216,7 +216,7 @@ However, the exact cache does not distinguish between "this was originally `ask`
 
 **Severity:** MEDIUM
 **Affected files:** `src/storage/jsonl.rs:53-81`, `src/cascade/cache.rs:28-33`
-**Description:** The JSONL rule files in `.captain-hook/rules/` are checked into git (by design, for PR reviewability). This means:
+**Description:** The JSONL rule files in `.hookwise/rules/` are checked into git (by design, for PR reviewability). This means:
 
 1. A malicious PR can add `allow` entries for dangerous operations.
 2. The entries are loaded directly into the exact cache and similarity indexes without validation beyond JSON parsing.
@@ -234,7 +234,7 @@ However, the exact cache does not distinguish between "this was originally `ask`
 **Remediation:**
 - Add a pre-merge validation step that checks new rule entries against sensitive path patterns.
 - Consider HMAC signing of rule files with a project-specific key.
-- Add warnings in `captain-hook build` when loading rules with wildcard role `*` and `Allow` decision for dangerous tools.
+- Add warnings in `hookwise build` when loading rules with wildcard role `*` and `Allow` decision for dangerous tools.
 
 ---
 
@@ -309,7 +309,7 @@ However, the exact cache does not distinguish between "this was originally `ask`
 
 **Severity:** LOW
 **Affected files:** `src/config/policy.rs:182`, `src/cli/mod.rs:134`, `src/cli/check.rs:165`, `src/cli/monitor.rs:122`, `src/cli/build.rs:87`, `src/cli/override_cmd.rs:87`
-**Description:** When `HOME` is not set, the code falls back to `/tmp` as the home directory. This means global config would be read from `/tmp/.config/captain-hook/`, which is world-writable. An attacker could plant a malicious `config.yml` there.
+**Description:** When `HOME` is not set, the code falls back to `/tmp` as the home directory. This means global config would be read from `/tmp/.config/hookwise/`, which is world-writable. An attacker could plant a malicious `config.yml` there.
 
 **Remediation:**
 - Fail explicitly if `HOME` is not set rather than falling back to `/tmp`.

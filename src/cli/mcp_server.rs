@@ -19,12 +19,12 @@ use crate::storage::jsonl::JsonlStorage;
 use crate::storage::StorageBackend;
 
 #[derive(Clone)]
-pub struct CaptainHookMcp {
+pub struct HookwiseMcp {
     #[allow(dead_code)]
     tool_router: ToolRouter<Self>,
 }
 
-impl Default for CaptainHookMcp {
+impl Default for HookwiseMcp {
     fn default() -> Self {
         Self::new()
     }
@@ -86,7 +86,7 @@ fn default_scope() -> String {
 // --- Tool implementations ---
 
 #[tool_router]
-impl CaptainHookMcp {
+impl HookwiseMcp {
     pub fn new() -> Self {
         Self {
             tool_router: Self::tool_router(),
@@ -96,7 +96,7 @@ impl CaptainHookMcp {
     #[tool(
         description = "Register a session with a role for permission gating. Each session must be registered before tool calls are permitted."
     )]
-    async fn captain_hook_register(
+    async fn hookwise_register(
         &self,
         params: Parameters<RegisterParams>,
     ) -> std::result::Result<CallToolResult, McpError> {
@@ -131,9 +131,9 @@ impl CaptainHookMcp {
     }
 
     #[tool(
-        description = "Disable captain-hook permission gating for a session. All tool calls will be permitted."
+        description = "Disable hookwise permission gating for a session. All tool calls will be permitted."
     )]
-    async fn captain_hook_disable(
+    async fn hookwise_disable(
         &self,
         params: Parameters<SessionIdParams>,
     ) -> std::result::Result<CallToolResult, McpError> {
@@ -152,9 +152,9 @@ impl CaptainHookMcp {
     }
 
     #[tool(
-        description = "Re-enable captain-hook permission gating for a previously disabled session."
+        description = "Re-enable hookwise permission gating for a previously disabled session."
     )]
-    async fn captain_hook_enable(
+    async fn hookwise_enable(
         &self,
         params: Parameters<SessionIdParams>,
     ) -> std::result::Result<CallToolResult, McpError> {
@@ -173,11 +173,11 @@ impl CaptainHookMcp {
     }
 
     #[tool(
-        description = "Show captain-hook statistics: cached decisions, hit rates, and decision distribution by tier/role/tool."
+        description = "Show hookwise statistics: cached decisions, hit rates, and decision distribution by tier/role/tool."
     )]
-    async fn captain_hook_status(&self) -> std::result::Result<CallToolResult, McpError> {
+    async fn hookwise_status(&self) -> std::result::Result<CallToolResult, McpError> {
         let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-        let project_root = cwd.join(".captain-hook");
+        let project_root = cwd.join(".hookwise");
         let global_root = crate::config::dirs_global();
 
         let storage = JsonlStorage::new(project_root, global_root, None);
@@ -221,7 +221,7 @@ impl CaptainHookMcp {
     }
 
     #[tool(description = "List pending permission decisions waiting for human approval.")]
-    async fn captain_hook_queue(&self) -> std::result::Result<CallToolResult, McpError> {
+    async fn hookwise_queue(&self) -> std::result::Result<CallToolResult, McpError> {
         let state = load_queue_file();
         let pending: Vec<_> = state.pending.values().cloned().collect();
 
@@ -251,7 +251,7 @@ impl CaptainHookMcp {
     #[tool(
         description = "Approve a pending permission decision. The tool call will be allowed to proceed."
     )]
-    async fn captain_hook_approve(
+    async fn hookwise_approve(
         &self,
         params: Parameters<ApproveParams>,
     ) -> std::result::Result<CallToolResult, McpError> {
@@ -292,7 +292,7 @@ impl CaptainHookMcp {
     }
 
     #[tool(description = "Deny a pending permission decision. The tool call will be blocked.")]
-    async fn captain_hook_deny(
+    async fn hookwise_deny(
         &self,
         params: Parameters<DenyParams>,
     ) -> std::result::Result<CallToolResult, McpError> {
@@ -333,11 +333,11 @@ impl CaptainHookMcp {
     }
 }
 
-impl rmcp::handler::server::ServerHandler for CaptainHookMcp {
+impl rmcp::handler::server::ServerHandler for HookwiseMcp {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
             instructions: Some(
-                "captain-hook: intelligent permission gating for AI coding assistants".into(),
+                "hookwise: intelligent permission gating for AI coding assistants".into(),
             ),
             ..Default::default()
         }
@@ -355,11 +355,11 @@ fn truncate(s: &str, max: usize) -> String {
 
 /// Run the MCP server over stdio.
 pub async fn run() -> Result<()> {
-    let server = CaptainHookMcp::new();
+    let server = HookwiseMcp::new();
     let transport = rmcp::transport::io::stdio();
 
     let service = server.serve(transport).await.map_err(|e| {
-        crate::error::CaptainHookError::Io(std::io::Error::other(format!(
+        crate::error::HookwiseError::Io(std::io::Error::other(format!(
             "MCP server initialization failed: {}",
             e
         )))
@@ -367,7 +367,7 @@ pub async fn run() -> Result<()> {
 
     // Wait for the service to complete (client disconnect or shutdown)
     service.waiting().await.map_err(|e| {
-        crate::error::CaptainHookError::Io(std::io::Error::other(format!(
+        crate::error::HookwiseError::Io(std::io::Error::other(format!(
             "MCP server error: {}",
             e
         )))

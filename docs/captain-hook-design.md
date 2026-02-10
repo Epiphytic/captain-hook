@@ -1,12 +1,12 @@
-# captain-hook: Intelligent Permission Gating for Claude Code
+# hookwise: Intelligent Permission Gating for Claude Code
 
 ## Overview
 
-captain-hook is a Rust binary that acts as a Claude Code hook to provide intelligent, learned permission gating across multi-session and multi-agent Claude Code environments. It implements a cascading decision system that starts fast (cached exact matches), falls back to token-level Jaccard similarity, then to embedding-based HNSW similarity (instant-distance + fastembed), then to a pluggable LLM supervisor agent, and finally to a human-in-the-loop — only when genuinely needed.
+hookwise is a Rust binary that acts as a Claude Code hook to provide intelligent, learned permission gating across multi-session and multi-agent Claude Code environments. It implements a cascading decision system that starts fast (cached exact matches), falls back to token-level Jaccard similarity, then to embedding-based HNSW similarity (instant-distance + fastembed), then to a pluggable LLM supervisor agent, and finally to a human-in-the-loop — only when genuinely needed.
 
 Decisions are cached and checked into git at the project level, so permission knowledge accumulates over time and is shared across contributors. The system supports scoped rules at the org, project, user, and role levels.
 
-captain-hook ships as a Claude Code plugin, bundling the Rust binary, hooks, agent instructions, and slash commands into a single installable package.
+hookwise ships as a Claude Code plugin, bundling the Rust binary, hooks, agent instructions, and slash commands into a single installable package.
 
 ## Problem Statement
 
@@ -15,7 +15,7 @@ Claude Code's built-in permission system is per-session and binary: the user app
 1. **Permission fatigue**: Dozens of agents generating hundreds of tool calls, each requiring human approval
 2. **No institutional memory**: Permissions granted in one session don't carry to the next. Every new session starts cold.
 
-captain-hook solves both by building a learned permission policy that gets smarter over time, only involving a human for genuinely novel or ambiguous decisions.
+hookwise solves both by building a learned permission policy that gets smarter over time, only involving a human for genuinely novel or ambiguous decisions.
 
 ## Architecture
 
@@ -119,9 +119,9 @@ Every decision at tiers 3 and 4 feeds back into tiers 1, 2a, and 2b. The system 
 
 ### Registration Mechanism
 
-Every session must be registered with a role before captain-hook permits tool calls. Registration maps a session_id to a role, task description, and optional agent prompt.
+Every session must be registered with a role before hookwise permits tool calls. Registration maps a session_id to a role, task description, and optional agent prompt.
 
-**Registration file**: `/tmp/captain-hook-<team-id>-sessions.json` (or `/tmp/captain-hook-solo-sessions.json` for non-team use):
+**Registration file**: `/tmp/hookwise-<team-id>-sessions.json` (or `/tmp/hookwise-solo-sessions.json` for non-team use):
 
 ```json
 {
@@ -129,7 +129,7 @@ Every session must be registered with a role before captain-hook permits tool ca
     "role": "coder",
     "task": "Implement auth handler for the API",
     "prompt_hash": "sha256:...",
-    "prompt_path": "/tmp/.captain-hook-prompt-abc-123",
+    "prompt_path": "/tmp/.hookwise-prompt-abc-123",
     "registered_at": "2026-02-08T...",
     "registered_by": "team-lead"
   },
@@ -137,7 +137,7 @@ Every session must be registered with a role before captain-hook permits tool ca
     "role": "tester",
     "task": "Run pytest suite for auth module",
     "prompt_hash": "sha256:...",
-    "prompt_path": "/tmp/.captain-hook-prompt-def-456",
+    "prompt_path": "/tmp/.hookwise-prompt-def-456",
     "registered_at": "2026-02-08T...",
     "registered_by": "team-lead"
   }
@@ -157,14 +157,14 @@ An exclusion list tracks disabled sessions:
 **In agent teams** — the team lead registers each worker after spawning:
 
 ```bash
-captain-hook register \
+hookwise register \
   --session-id "$SESSION_ID" \
   --role coder \
   --task "Implement auth handler" \
-  --prompt-file /tmp/.captain-hook-prompt-$SESSION_ID
+  --prompt-file /tmp/.hookwise-prompt-$SESSION_ID
 ```
 
-**In interactive sessions** — captain-hook prompts the user to pick a role on first use. This is triggered by the `user_prompt_submit` hook (see Interactive Registration below).
+**In interactive sessions** — hookwise prompts the user to pick a role on first use. This is triggered by the `user_prompt_submit` hook (see Interactive Registration below).
 
 ### Unregistered Session Behavior
 
@@ -179,7 +179,7 @@ When a `PreToolUse` hook fires for an unregistered session:
 ```json
 {
   "decision": "block",
-  "reason": "captain-hook: Session not registered.\n\nThis session needs a role before tool calls are permitted.\n\nTo register: /captain-hook register\nTo disable:  /captain-hook disable\n\nOr from a terminal:\n  captain-hook register --session-id abc-123 --role <role>\n  captain-hook disable --session-id abc-123"
+  "reason": "hookwise: Session not registered.\n\nThis session needs a role before tool calls are permitted.\n\nTo register: /hookwise register\nTo disable:  /hookwise disable\n\nOr from a terminal:\n  hookwise register --session-id abc-123 --role <role>\n  hookwise disable --session-id abc-123"
 }
 ```
 
@@ -187,7 +187,7 @@ The tool call is blocked but the session continues. The next tool call retries t
 
 ### Interactive Registration
 
-For interactive (non-team) sessions, captain-hook uses the `user_prompt_submit` hook to prompt the user before any work begins.
+For interactive (non-team) sessions, hookwise uses the `user_prompt_submit` hook to prompt the user before any work begins.
 
 **Hook configuration:**
 
@@ -197,25 +197,25 @@ For interactive (non-team) sessions, captain-hook uses the `user_prompt_submit` 
     "user_prompt_submit": [
       {
         "matcher": ".*",
-        "command": "captain-hook session-check"
+        "command": "hookwise session-check"
       }
     ],
     "PreToolUse": [
       {
         "matcher": ".*",
-        "command": "captain-hook check"
+        "command": "hookwise check"
       }
     ]
   }
 }
 ```
 
-`captain-hook session-check` runs when the user submits a prompt:
+`hookwise session-check` runs when the user submits a prompt:
 - If registered or disabled -> exit silently, no interference
 - If unregistered -> output a message that Claude sees as system context:
 
 ```
-captain-hook: This session has no role assigned.
+hookwise: This session has no role assigned.
 
 Before proceeding, ask the user to choose a role using AskUserQuestion.
 Available roles grouped by type:
@@ -224,10 +224,10 @@ Implementation: coder, tester, integrator, devops
 Knowledge:      researcher, architect, planner, reviewer, security-reviewer, docs
 Full-access:    maintainer, troubleshooter
 
-They may also choose to disable captain-hook for this session.
+They may also choose to disable hookwise for this session.
 
-After the user chooses, run: captain-hook register --session-id <id> --role <chosen-role>
-Or: captain-hook disable --session-id <id>
+After the user chooses, run: hookwise register --session-id <id> --role <chosen-role>
+Or: hookwise disable --session-id <id>
 
 Then proceed with their original request.
 ```
@@ -239,7 +239,7 @@ The user sees something like:
 ```
 > Fix the auth bug in the login handler
 
-  captain-hook: What role should this session use?
+  hookwise: What role should this session use?
 
   Implementation roles:
   [coder]             - modify src/, lib/ (Recommended)
@@ -259,7 +259,7 @@ The user sees something like:
   [maintainer]        - full repository access
   [troubleshooter]    - full access for debugging
 
-  [disable]           - turn off captain-hook
+  [disable]           - turn off hookwise
 ```
 
 One-time per session. Takes a few seconds. After that, tool calls flow through the cascade normally.
@@ -279,7 +279,7 @@ fn resolve_role(session_id: &str) -> Option<RoleDefinition> {
         return Some(role);
     }
     // 3. Env var fallback (nanoseconds, for scripted/CI use)
-    if let Ok(role_name) = std::env::var("CAPTAIN_HOOK_ROLE") {
+    if let Ok(role_name) = std::env::var("HOOKWISE_ROLE") {
         return load_role_from_config(&role_name);
     }
     // 4. Not registered
@@ -289,37 +289,37 @@ fn resolve_role(session_id: &str) -> Option<RoleDefinition> {
 
 ## Components
 
-### 1. The Rust Binary (`captain-hook`)
+### 1. The Rust Binary (`hookwise`)
 
 The core binary serves multiple modes:
 
 **Hook mode** — called by Claude Code on every `PreToolUse` event. Reads the hook payload from stdin as JSON:
 ```bash
-echo '{"session_id":"abc-123","tool_name":"Bash","tool_input":{"command":"pytest --cov"},...}' | captain-hook check
+echo '{"session_id":"abc-123","tool_name":"Bash","tool_input":{"command":"pytest --cov"},...}' | hookwise check
 # Outputs JSON to stdout with hookSpecificOutput.permissionDecision = "allow"|"deny"|"ask"
 ```
 
 **Session check mode** — called on `user_prompt_submit` to trigger registration:
 ```bash
-captain-hook session-check
+hookwise session-check
 # Outputs registration prompt if session is unregistered
 ```
 
 **Queue mode** — human interface for pending decisions:
 ```bash
-captain-hook queue                        # List pending decisions
-captain-hook approve <id>                 # Approve (cached as allow)
-captain-hook deny <id>                    # Deny (cached as deny)
-captain-hook approve <id> --always-ask    # Allow this time, cache as ask
-captain-hook deny <id> --always-ask       # Deny this time, cache as ask
-captain-hook approve <id> --add-rule      # Approve and codify as rule
-captain-hook approve <id> --scope org     # Set rule scope
+hookwise queue                        # List pending decisions
+hookwise approve <id>                 # Approve (cached as allow)
+hookwise deny <id>                    # Deny (cached as deny)
+hookwise approve <id> --always-ask    # Allow this time, cache as ask
+hookwise deny <id> --always-ask       # Deny this time, cache as ask
+hookwise approve <id> --add-rule      # Approve and codify as rule
+hookwise approve <id> --scope org     # Set rule scope
 ```
 
 **Monitor mode** — observe decisions in real time:
 ```bash
-captain-hook monitor                      # Stream decisions live
-captain-hook stats                        # Cache hit rates, decision distribution
+hookwise monitor                      # Stream decisions live
+hookwise stats                        # Cache hit rates, decision distribution
 ```
 
 ### 2. Secret Sanitization
@@ -450,7 +450,7 @@ This catches semantic similarity: if `rm -rf /tmp/build-output` was approved, th
 The vector index is built from the cached decisions and is **not** checked into git — it's a derived artifact rebuilt locally:
 
 ```bash
-captain-hook build   # Rebuild .index/ from rules/
+hookwise build   # Rebuild .index/ from rules/
 ```
 
 Or rebuilt lazily on first hook call if the index is missing.
@@ -472,13 +472,13 @@ The supervisor evaluates novel commands against the project's permission policy,
 - Has access to the requesting agent's prompt and task description for context
 - Preserves the main session's context — it knows what tasks were delegated and why
 - Routine decisions are handled silently; only uncertain cases surface to the user
-- Socket location: `/tmp/captain-hook-<team-id>.sock`
+- Socket location: `/tmp/hookwise-<team-id>.sock`
 
 **`ApiSupervisor`** — for standalone use or CI:
 - Calls the Anthropic API directly with the permission context
 - Uses a dedicated system prompt with the project's policy, role definitions, and cached decisions
 - Configurable model (default: claude-sonnet-4-5-20250929)
-- API key from `ANTHROPIC_API_KEY` env var or `~/.config/captain-hook/config.yml`
+- API key from `ANTHROPIC_API_KEY` env var or `~/.config/hookwise/config.yml`
 - Useful for CI pipelines, standalone development, or environments without a running Claude Code session
 
 Both implementations:
@@ -496,7 +496,7 @@ trait SupervisorBackend: Send + Sync {
         &self,
         request: &SupervisorRequest,
         policy: &PolicyConfig,
-    ) -> Result<DecisionRecord, CaptainHookError>;
+    ) -> Result<DecisionRecord, HookwiseError>;
 }
 ```
 
@@ -504,7 +504,7 @@ trait SupervisorBackend: Send + Sync {
 - Supports concurrent connections from multiple worker sessions
 - Bidirectional — request/response over a single connection
 - The requesting session's hook blocks on the socket while waiting for a response
-- Socket location: `/tmp/captain-hook-<team-id>.sock`
+- Socket location: `/tmp/hookwise-<team-id>.sock`
 
 ### 8. Human-in-the-Loop (Tier 4)
 
@@ -513,7 +513,7 @@ When the LLM supervisor's confidence is below threshold — or when the cache re
 The pending decision can be answered from:
 
 - **The main Claude Code session** — the supervisor agent surfaces it as a message
-- **A terminal** — `captain-hook queue` shows pending items, `captain-hook approve/deny` answers them
+- **A terminal** — `hookwise queue` shows pending items, `hookwise approve/deny` answers them
 - **Any future interface** — web UI, mobile notification, VS Code panel — anything that can read/write the queue
 
 The queue is the universal interface. The decision source doesn't matter; the answer routes back through the socket to the blocked binary.
@@ -585,7 +585,7 @@ sec-review  -> docs/reviews/security/ -> read by coder, maintainer, devops
 ```
 
 ```yaml
-# .captain-hook/roles.yml
+# .hookwise/roles.yml
 roles:
 
   # ── Implementation Roles ────────────────────────────────────────────
@@ -869,7 +869,7 @@ roles:
 
 ### Custom Roles
 
-Projects can define additional roles or override built-in ones in their `.captain-hook/roles.yml`. Custom roles follow the same structure:
+Projects can define additional roles or override built-in ones in their `.hookwise/roles.yml`. Custom roles follow the same structure:
 
 ```yaml
 roles:
@@ -891,7 +891,7 @@ Certain paths default to `ask` regardless of role, unless explicitly overridden 
 sensitive_paths:
   ask_write:
     - ".claude/**"
-    - ".captain-hook/**"
+    - ".hookwise/**"
     - ".env*"
     - "**/.env*"
     - ".git/hooks/**"
@@ -907,11 +907,11 @@ Even a `maintainer` with `allow_write: ["**"]` will be prompted when writing to 
 When the team lead spawns agents, roles are registered:
 
 ```bash
-captain-hook register \
+hookwise register \
   --session-id "$SESSION_ID" \
   --role tester \
   --task "Run pytest suite for auth module" \
-  --prompt-file /tmp/.captain-hook-prompt-$SESSION_ID
+  --prompt-file /tmp/.hookwise-prompt-$SESSION_ID
 ```
 
 The prompt file is stored locally (sanitized) and available to the LLM supervisor when evaluating novel commands. It answers "what was this agent instructed to do?" which helps the supervisor judge whether a tool call is within the agent's intended scope.
@@ -929,7 +929,7 @@ This means `pytest --cov` can be `allow` for a tester and `deny` for a docs agen
 ### Cache Invalidation on Role Change
 
 ```bash
-captain-hook invalidate --role tester
+hookwise invalidate --role tester
 ```
 
 Clears all cached decisions for the tester role. Next time each command is encountered, it's re-evaluated against the updated role definition. The system "recompiles" the role organically through usage.
@@ -939,8 +939,8 @@ Clears all cached decisions for the tester role. Next time each command is encou
 Human-set overrides take priority over cached LLM interpretations:
 
 ```bash
-captain-hook override --role tester --command "docker compose up" --allow
-captain-hook override --role coder --tool Write --file ".claude/*" --ask
+hookwise override --role tester --command "docker compose up" --allow
+hookwise override --role coder --tool Write --file ".claude/*" --ask
 ```
 
 Decision priority:
@@ -963,9 +963,9 @@ Role:    ====        ======        ==  Task-scoped least privilege
 
 | Scope | What it governs | Where it lives |
 |-------|----------------|----------------|
-| Org | Security floor for all repos in the org | `~/.config/captain-hook/org/<org>/` synced from central source |
-| Project | Project-specific tool permissions | `<repo>/.captain-hook/rules/` checked into git |
-| User | Personal preferences across projects | `~/.config/captain-hook/user/` local only |
+| Org | Security floor for all repos in the org | `~/.config/hookwise/org/<org>/` synced from central source |
+| Project | Project-specific tool permissions | `<repo>/.hookwise/rules/` checked into git |
+| User | Personal preferences across projects | `~/.config/hookwise/user/` local only |
 | Role | Task-scoped permissions for agent team members | Set by team lead at agent spawn time |
 
 ### Precedence
@@ -1011,7 +1011,7 @@ The hook receives JSON on stdin from Claude Code:
 ```json
 {
   "session_id": "abc-123",
-  "cwd": "/Users/liam/repos/epiphytic/captain-hook",
+  "cwd": "/Users/liam/repos/epiphytic/hookwise",
   "tool_name": "Bash",
   "tool_input": {"command": "pytest --cov"},
   "permission_mode": "default"
@@ -1057,8 +1057,8 @@ In the context of Claude Code agent teams:
 
 1. **Team lead** spawns a permission supervisor agent alongside worker agents
 2. **Supervisor agent** loads all indexes, opens the Unix socket, evaluates requests
-3. **Team lead** registers each worker with `captain-hook register` after spawning
-4. **Worker agents** have `PreToolUse` hooks pointing to `captain-hook check`
+3. **Team lead** registers each worker with `hookwise register` after spawning
+4. **Worker agents** have `PreToolUse` hooks pointing to `hookwise check`
 5. **Each worker** is registered with a role, task description, and prompt
 6. **Decisions flow**: worker hook -> binary -> path policy -> cache -> Jaccard -> HNSW -> supervisor -> (maybe human)
 7. **Results flow back**: supervisor -> socket -> binary -> JSON stdout -> Claude Code allows/denies
@@ -1067,11 +1067,11 @@ The permission agent is lightweight — mostly routing to the cache/Jaccard/HNSW
 
 ## Slash Commands
 
-captain-hook ships the following skills as part of its Claude Code plugin:
+hookwise ships the following skills as part of its Claude Code plugin:
 
-**`/captain-hook register`** — interactive role selection for the current session:
+**`/hookwise register`** — interactive role selection for the current session:
 ```
-> /captain-hook register
+> /hookwise register
 
 What role should this session use?
 
@@ -1085,29 +1085,29 @@ Registered session abc-123 as "coder".
 Path policy: allow src/**, lib/**, Cargo.toml, package.json | deny tests/**, docs/**, .github/**
 ```
 
-**`/captain-hook disable`** — opt out for the current session:
+**`/hookwise disable`** — opt out for the current session:
 ```
-> /captain-hook disable
+> /hookwise disable
 
-captain-hook disabled for session abc-123.
+hookwise disabled for session abc-123.
 All tool calls will be permitted without gating.
-To re-enable: /captain-hook enable
+To re-enable: /hookwise enable
 ```
 
-**`/captain-hook enable`** — re-enable after disable (prompts for role if not previously registered).
+**`/hookwise enable`** — re-enable after disable (prompts for role if not previously registered).
 
-**`/captain-hook switch`** — change role mid-session:
+**`/hookwise switch`** — change role mid-session:
 ```
-> /captain-hook switch docs
+> /hookwise switch docs
 
 Switched session abc-123 from "coder" to "docs".
 Path restrictions: allow docs/**, *.md | deny src/**, tests/**
 Session cache cleared — decisions will be re-evaluated for the new role.
 ```
 
-**`/captain-hook status`** — show current session state:
+**`/hookwise status`** — show current session state:
 ```
-> /captain-hook status
+> /hookwise status
 
 Session: abc-123
 Role: coder
@@ -1120,7 +1120,7 @@ Uptime: 23m
 
 ```
 <repo>/
-+-- .captain-hook/
++-- .hookwise/
 |   +-- policy.yml              # Project policy, sensitive paths, confidence thresholds
 |   +-- roles.yml               # Role definitions with path policies
 |   +-- rules/                  # Checked into git
@@ -1133,7 +1133,7 @@ Uptime: 23m
 |   +-- .user/                  # .gitignored — personal preferences
 |       +-- user.jsonl          # User-level decisions
 
-~/.config/captain-hook/
+~/.config/hookwise/
 +-- org/
 |   +-- <org-name>/
 |       +-- policy.yml          # Org-wide rules
@@ -1147,32 +1147,32 @@ Uptime: 23m
 |   +-- rules.jsonl             # Personal cross-project rules
 |   +-- .index/
 |       +-- user.hnsw
-+-- config.yml                  # Global captain-hook configuration
++-- config.yml                  # Global hookwise configuration
 ```
 
 ### Git Integration
 
-**Checked in** (`.captain-hook/rules/`, `.captain-hook/policy.yml`, `.captain-hook/roles.yml`):
+**Checked in** (`.hookwise/rules/`, `.hookwise/policy.yml`, `.hookwise/roles.yml`):
 - Sanitized JSONL — no secrets, human-readable, diffable
 - Permission decisions (including `ask` entries) appear in PRs and are reviewable
 - New contributors get the project's permission baseline on clone
 
-**Gitignored** (`.captain-hook/.index/`, `.captain-hook/.user/`):
+**Gitignored** (`.hookwise/.index/`, `.hookwise/.user/`):
 - Vector indexes — binary, rebuilt from rules
 - User preferences — personal, not shared
 
 **Pre-commit safety net:**
-A git pre-commit hook runs a secret scan over `.captain-hook/rules/` before allowing commits. Belt and suspenders — sanitization should catch everything, but the hook prevents accidents:
+A git pre-commit hook runs a secret scan over `.hookwise/rules/` before allowing commits. Belt and suspenders — sanitization should catch everything, but the hook prevents accidents:
 
 ```bash
 # .git/hooks/pre-commit or via husky/lefthook
-captain-hook scan --staged .captain-hook/rules/
+hookwise scan --staged .hookwise/rules/
 ```
 
 ## CLI Reference
 
 ```
-captain-hook <command> [options]
+hookwise <command> [options]
 
 HOOK MODE (called by Claude Code):
   check                          Evaluate a tool call. Reads hook payload from stdin as JSON.
@@ -1188,9 +1188,9 @@ REGISTRATION:
     --role <name>                Role name from roles.yml
     --task <description>         Delegated task description
     --prompt-file <path>         Path to the agent's system prompt (sanitized, stored locally)
-  disable                        Disable captain-hook for a session
+  disable                        Disable hookwise for a session
     --session-id <id>            Claude Code session ID
-  enable                         Re-enable captain-hook for a disabled session
+  enable                         Re-enable hookwise for a disabled session
     --session-id <id>            Claude Code session ID
 
 QUEUE MODE (human interface):
@@ -1223,7 +1223,7 @@ MONITORING:
   scan --staged <path>           Pre-commit secret scan on staged files
 
 ADMINISTRATION:
-  init                           Initialize .captain-hook/ in a repo
+  init                           Initialize .hookwise/ in a repo
   config                         View/edit global configuration
   sync                           Pull latest org-level rules
 ```
@@ -1238,20 +1238,20 @@ In the project's `.claude/settings.json` or equivalent:
     "user_prompt_submit": [
       {
         "matcher": ".*",
-        "command": "captain-hook session-check"
+        "command": "hookwise session-check"
       }
     ],
     "PreToolUse": [
       {
         "matcher": ".*",
-        "command": "captain-hook check"
+        "command": "hookwise check"
       }
     ]
   }
 }
 ```
 
-Claude Code passes the hook payload as JSON on stdin. The `captain-hook check` command reads it, extracts `session_id`, `tool_name`, and `tool_input`, and outputs JSON to stdout:
+Claude Code passes the hook payload as JSON on stdin. The `hookwise check` command reads it, extracts `session_id`, `tool_name`, and `tool_input`, and outputs JSON to stdout:
 
 ```json
 {
@@ -1344,35 +1344,35 @@ Over the lifetime of a project:
 
 ## Plugin Structure
 
-captain-hook ships as a Claude Code plugin. The plugin layout follows the Claude Code plugin specification:
+hookwise ships as a Claude Code plugin. The plugin layout follows the Claude Code plugin specification:
 
 ```
-captain-hook/
+hookwise/
 +-- .claude-plugin/
 |   +-- plugin.json              # Plugin manifest: name, version, description, entrypoint
 +-- hooks/
 |   +-- hooks.json               # Hook definitions (PreToolUse, user_prompt_submit)
 +-- skills/
-|   +-- captain-hook-register.md # /captain-hook register skill
-|   +-- captain-hook-disable.md  # /captain-hook disable skill
-|   +-- captain-hook-enable.md   # /captain-hook enable skill
-|   +-- captain-hook-switch.md   # /captain-hook switch skill
-|   +-- captain-hook-status.md   # /captain-hook status skill
+|   +-- hookwise-register.md # /hookwise register skill
+|   +-- hookwise-disable.md  # /hookwise disable skill
+|   +-- hookwise-enable.md   # /hookwise enable skill
+|   +-- hookwise-switch.md   # /hookwise switch skill
+|   +-- hookwise-status.md   # /hookwise status skill
 +-- agents/
 |   +-- supervisor.md            # Supervisor agent instructions
 +-- src/                         # Rust source code
 +-- Cargo.toml                   # Rust project manifest
-+-- target/release/captain-hook  # Compiled binary (built on install)
++-- target/release/hookwise  # Compiled binary (built on install)
 ```
 
 ### plugin.json
 
 ```json
 {
-  "name": "captain-hook",
+  "name": "hookwise",
   "version": "0.1.0",
   "description": "Intelligent permission gating for Claude Code with learned decisions, role-based access, and multi-agent support.",
-  "entrypoint": "target/release/captain-hook"
+  "entrypoint": "target/release/hookwise"
 }
 ```
 
@@ -1384,13 +1384,13 @@ captain-hook/
     "user_prompt_submit": [
       {
         "matcher": ".*",
-        "command": "captain-hook session-check"
+        "command": "hookwise session-check"
       }
     ],
     "PreToolUse": [
       {
         "matcher": ".*",
-        "command": "captain-hook check"
+        "command": "hookwise check"
       }
     ]
   }
@@ -1399,7 +1399,7 @@ captain-hook/
 
 ### Skills
 
-Each skill is a markdown file with instructions for Claude Code to execute the corresponding CLI command. Skills are invoked via slash commands (e.g., `/captain-hook register`) and map directly to CLI subcommands.
+Each skill is a markdown file with instructions for Claude Code to execute the corresponding CLI command. Skills are invoked via slash commands (e.g., `/hookwise register`) and map directly to CLI subcommands.
 
 ### Supervisor Agent
 

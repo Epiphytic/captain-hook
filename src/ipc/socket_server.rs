@@ -7,7 +7,7 @@ use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::UnixListener;
 use tokio::sync::Notify;
 
-use crate::error::{CaptainHookError, Result};
+use crate::error::{HookwiseError, Result};
 use crate::ipc::{IpcRequest, IpcResponse};
 
 /// Unix socket server for the supervisor agent.
@@ -43,7 +43,7 @@ impl IpcServer {
         }
 
         let listener =
-            UnixListener::bind(&self.socket_path).map_err(|e| CaptainHookError::Ipc {
+            UnixListener::bind(&self.socket_path).map_err(|e| HookwiseError::Ipc {
                 reason: format!(
                     "failed to bind socket at {}: {}",
                     self.socket_path.display(),
@@ -52,7 +52,7 @@ impl IpcServer {
             })?;
 
         eprintln!(
-            "captain-hook: supervisor listening on {}",
+            "hookwise: supervisor listening on {}",
             self.socket_path.display()
         );
 
@@ -67,17 +67,17 @@ impl IpcServer {
                             let handler = handler.clone();
                             tokio::spawn(async move {
                                 if let Err(e) = handle_connection(stream, handler).await {
-                                    eprintln!("captain-hook: connection error: {}", e);
+                                    eprintln!("hookwise: connection error: {}", e);
                                 }
                             });
                         }
                         Err(e) => {
-                            eprintln!("captain-hook: accept error: {}", e);
+                            eprintln!("hookwise: accept error: {}", e);
                         }
                     }
                 }
                 _ = shutdown.notified() => {
-                    eprintln!("captain-hook: supervisor shutting down");
+                    eprintln!("hookwise: supervisor shutting down");
                     break;
                 }
             }
@@ -111,12 +111,12 @@ where
     buf_reader
         .read_line(&mut line)
         .await
-        .map_err(|e| CaptainHookError::Ipc {
+        .map_err(|e| HookwiseError::Ipc {
             reason: format!("read failed: {}", e),
         })?;
 
     let request: IpcRequest =
-        serde_json::from_str(line.trim()).map_err(|e| CaptainHookError::Ipc {
+        serde_json::from_str(line.trim()).map_err(|e| HookwiseError::Ipc {
             reason: format!("invalid request JSON: {}", e),
         })?;
 
@@ -128,16 +128,16 @@ where
     writer
         .write_all(response_json.as_bytes())
         .await
-        .map_err(|e| CaptainHookError::Ipc {
+        .map_err(|e| HookwiseError::Ipc {
             reason: format!("write failed: {}", e),
         })?;
     writer
         .write_all(b"\n")
         .await
-        .map_err(|e| CaptainHookError::Ipc {
+        .map_err(|e| HookwiseError::Ipc {
             reason: format!("write newline failed: {}", e),
         })?;
-    writer.shutdown().await.map_err(|e| CaptainHookError::Ipc {
+    writer.shutdown().await.map_err(|e| HookwiseError::Ipc {
         reason: format!("shutdown failed: {}", e),
     })?;
 

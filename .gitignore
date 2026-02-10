@@ -3,9 +3,9 @@
 debug/
 release/
 
-# captain-hook local artifacts (derived, not shared)
-.captain-hook/.index/
-.captain-hook/.user/
+# hookwise local artifacts (derived, not shared)
+.hookwise/.index/
+.hookwise/.user/
 
 # IDE
 .idea/

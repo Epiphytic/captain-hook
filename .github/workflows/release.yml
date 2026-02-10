@@ -36,7 +36,7 @@ jobs:
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          BIN_NAME="captain-hook"
+          BIN_NAME="hookwise"
           BUILD_TARGET="x86_64-unknown-linux-gnu"
           ARCHIVE_NAME="${BIN_NAME}-${TAG_NAME}-${BUILD_TARGET}"
 
@@ -53,7 +53,7 @@ jobs:
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          ARCHIVE_NAME="captain-hook-${TAG_NAME}-plugin-files"
+          ARCHIVE_NAME="hookwise-${TAG_NAME}-plugin-files"
           tar czf "${ARCHIVE_NAME}.tar.gz" \
             hooks/hooks.json \
             hooks/gemini-hooks.json \
@@ -65,11 +65,11 @@ jobs:
             skills/enable/SKILL.md \
             skills/switch/SKILL.md \
             skills/status/SKILL.md \
-            commands/captain-hook/register.toml \
-            commands/captain-hook/disable.toml \
-            commands/captain-hook/enable.toml \
-            commands/captain-hook/switch.toml \
-            commands/captain-hook/status.toml \
+            commands/hookwise/register.toml \
+            commands/hookwise/disable.toml \
+            commands/hookwise/enable.toml \
+            commands/hookwise/switch.toml \
+            commands/hookwise/status.toml \
             agents/supervisor.md
 
           sha256sum "${ARCHIVE_NAME}.tar.gz" > "${ARCHIVE_NAME}.tar.gz.sha256"
@@ -77,14 +77,14 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: captain-hook-x86_64-unknown-linux-gnu
+          name: hookwise-x86_64-unknown-linux-gnu
           path: |
-            captain-hook-*.tar.gz
-            captain-hook-*.sha256
+            hookwise-*.tar.gz
+            hookwise-*.sha256
 
   build-macos:
     name: Build aarch64-apple-darwin
-    runs-on: [self-hosted, captain-hook, macos]
+    runs-on: [self-hosted, hookwise, macos]
     steps:
       - uses: actions/checkout@v4
 
@@ -109,7 +109,7 @@ jobs:
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          BIN_NAME="captain-hook"
+          BIN_NAME="hookwise"
           BUILD_TARGET="aarch64-apple-darwin"
           ARCHIVE_NAME="${BIN_NAME}-${TAG_NAME}-${BUILD_TARGET}"
 
@@ -125,10 +125,10 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: captain-hook-aarch64-apple-darwin
+          name: hookwise-aarch64-apple-darwin
           path: |
-            captain-hook-*.tar.gz
-            captain-hook-*.sha256
+            hookwise-*.tar.gz
+            hookwise-*.sha256
 
   install-test:
     name: Install validation
@@ -140,15 +140,15 @@ jobs:
       - name: Download x86_64 binary artifact
         uses: actions/download-artifact@v4
         with:
-          name: captain-hook-x86_64-unknown-linux-gnu
+          name: hookwise-x86_64-unknown-linux-gnu
           path: artifacts
 
       - name: Extract binary
         env:
           TAG_NAME: ${{ github.ref_name }}
         run: |
-          tar xzf "artifacts/captain-hook-${TAG_NAME}-x86_64-unknown-linux-gnu.tar.gz"
-          chmod +x captain-hook
+          tar xzf "artifacts/hookwise-${TAG_NAME}-x86_64-unknown-linux-gnu.tar.gz"
+          chmod +x hookwise
 
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
@@ -161,19 +161,19 @@ jobs:
       - name: Run install script
         run: |
           chmod +x scripts/install.sh
-          ./scripts/install.sh --binary ./captain-hook --scope user
+          ./scripts/install.sh --binary ./hookwise --scope user
 
       - name: Add install dir to PATH
         run: echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Verify captain-hook --version
+      - name: Verify hookwise --version
         run: |
-          captain-hook --version
+          hookwise --version
           echo "Version check passed"
 
-      - name: Verify captain-hook --help
+      - name: Verify hookwise --help
         run: |
-          HELP_OUTPUT=$(captain-hook --help)
+          HELP_OUTPUT=$(hookwise --help)
           echo "$HELP_OUTPUT"
           echo "$HELP_OUTPUT" | grep -q "check" || { echo "FAIL: --help missing 'check' subcommand"; exit 1; }
           echo "$HELP_OUTPUT" | grep -q "register" || { echo "FAIL: --help missing 'register' subcommand"; exit 1; }
@@ -181,18 +181,18 @@ jobs:
           echo "$HELP_OUTPUT" | grep -q "self-update" || { echo "FAIL: --help missing 'self-update' subcommand"; exit 1; }
           echo "Help check passed"
 
-      - name: Smoke test captain-hook check
+      - name: Smoke test hookwise check
         run: |
           # Set up config and register a session for the smoke test
           cd /tmp
-          captain-hook init
-          captain-hook register --session-id smoke-test --role maintainer
+          hookwise init
+          hookwise register --session-id smoke-test --role maintainer
 
           # Reduce human timeout for CI (default 60s is too slow for smoke tests)
-          sed -i 's/human_timeout_secs: 60/human_timeout_secs: 3/' .captain-hook/policy.yml
+          sed -i 's/human_timeout_secs: 60/human_timeout_secs: 3/' .hookwise/policy.yml
 
           # Run a check — maintainer role with a Bash command should produce valid JSON
-          OUTPUT=$(echo '{"session_id":"smoke-test","tool_name":"Bash","tool_input":{"command":"ls"},"cwd":"/tmp"}' | captain-hook check 2>/dev/null || true)
+          OUTPUT=$(echo '{"session_id":"smoke-test","tool_name":"Bash","tool_input":{"command":"ls"},"cwd":"/tmp"}' | hookwise check 2>/dev/null || true)
           echo "Output: $OUTPUT"
 
           # Validate it's JSON with hookSpecificOutput.permissionDecision
@@ -208,7 +208,7 @@ jobs:
           echo "Claude format smoke test passed"
 
           # Test Gemini format output
-          GEMINI_OUTPUT=$(echo '{"session_id":"smoke-test","tool_name":"write_file","tool_input":{"file_path":"test.txt","content":"hello"},"cwd":"/tmp","hook_event_name":"BeforeTool","timestamp":"2026-02-09T00:00:00Z"}' | captain-hook check --format gemini 2>/dev/null || true)
+          GEMINI_OUTPUT=$(echo '{"session_id":"smoke-test","tool_name":"write_file","tool_input":{"file_path":"test.txt","content":"hello"},"cwd":"/tmp","hook_event_name":"BeforeTool","timestamp":"2026-02-09T00:00:00Z"}' | hookwise check --format gemini 2>/dev/null || true)
           echo "Gemini output: $GEMINI_OUTPUT"
 
           echo "$GEMINI_OUTPUT" | python3 -c "
@@ -223,34 +223,34 @@ jobs:
           echo "Gemini format smoke test passed"
 
           # Clean up
-          rm -rf /tmp/.captain-hook
+          rm -rf /tmp/.hookwise
 
       - name: Verify plugin registered with Claude
         run: |
           # Verify the plugin appears in Claude's plugin list
-          claude plugin list 2>&1 | grep -q "captain-hook@captain-hook-local" || { echo "FAIL: captain-hook not in claude plugin list"; exit 1; }
+          claude plugin list 2>&1 | grep -q "hookwise@hookwise-local" || { echo "FAIL: hookwise not in claude plugin list"; exit 1; }
           echo "Plugin registered with Claude CLI"
 
           # Verify plugin files in the local marketplace directory
-          test -f ~/.captain-hook/plugin/hooks/hooks.json || { echo "FAIL: hooks.json not found"; exit 1; }
-          python3 -c "import json; json.load(open('$HOME/.captain-hook/plugin/hooks/hooks.json'))"
+          test -f ~/.hookwise/plugin/hooks/hooks.json || { echo "FAIL: hooks.json not found"; exit 1; }
+          python3 -c "import json; json.load(open('$HOME/.hookwise/plugin/hooks/hooks.json'))"
           echo "hooks.json is valid JSON"
 
-          test -f ~/.captain-hook/plugin/.claude-plugin/plugin.json || { echo "FAIL: plugin.json not found"; exit 1; }
-          test -f ~/.captain-hook/plugin/.claude-plugin/marketplace.json || { echo "FAIL: marketplace.json not found"; exit 1; }
+          test -f ~/.hookwise/plugin/.claude-plugin/plugin.json || { echo "FAIL: plugin.json not found"; exit 1; }
+          test -f ~/.hookwise/plugin/.claude-plugin/marketplace.json || { echo "FAIL: marketplace.json not found"; exit 1; }
           echo "Plugin and marketplace manifests present"
 
           # Verify plugin cached by Claude
-          test -d ~/.claude/plugins/cache/captain-hook-local/captain-hook/ || { echo "FAIL: plugin not in Claude cache"; exit 1; }
+          test -d ~/.claude/plugins/cache/hookwise-local/hookwise/ || { echo "FAIL: plugin not in Claude cache"; exit 1; }
           echo "Plugin cached by Claude"
 
           # Verify skill files exist
           for skill in register disable enable switch status; do
-            test -f ~/.captain-hook/plugin/skills/$skill/SKILL.md || { echo "FAIL: skills/$skill/SKILL.md not found"; exit 1; }
+            test -f ~/.hookwise/plugin/skills/$skill/SKILL.md || { echo "FAIL: skills/$skill/SKILL.md not found"; exit 1; }
           done
           echo "All skill files present"
 
-          test -f ~/.captain-hook/plugin/agents/supervisor.md || { echo "FAIL: agents/supervisor.md not found"; exit 1; }
+          test -f ~/.hookwise/plugin/agents/supervisor.md || { echo "FAIL: agents/supervisor.md not found"; exit 1; }
           echo "Agent file present"
 
           echo "Plugin verification passed"
@@ -272,5 +272,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/captain-hook-*.tar.gz
-            artifacts/captain-hook-*.sha256
+            artifacts/hookwise-*.tar.gz
+            artifacts/hookwise-*.sha256

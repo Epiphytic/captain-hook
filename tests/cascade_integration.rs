@@ -10,18 +10,18 @@ use async_trait::async_trait;
 use chrono::Utc;
 use tempfile::TempDir;
 
-use captain_hook::cascade::cache::ExactCache;
-use captain_hook::cascade::embed_sim::EmbeddingSimilarity;
-use captain_hook::cascade::path_policy::PathPolicyEngine;
-use captain_hook::cascade::token_sim::TokenJaccard;
-use captain_hook::cascade::{CascadeInput, CascadeRunner, CascadeTier};
-use captain_hook::config::policy::PolicyConfig;
-use captain_hook::config::roles::{CompiledPathPolicy, PathPolicyConfig, RoleDefinition};
-use captain_hook::decision::{
+use hookwise::cascade::cache::ExactCache;
+use hookwise::cascade::embed_sim::EmbeddingSimilarity;
+use hookwise::cascade::path_policy::PathPolicyEngine;
+use hookwise::cascade::token_sim::TokenJaccard;
+use hookwise::cascade::{CascadeInput, CascadeRunner, CascadeTier};
+use hookwise::config::policy::PolicyConfig;
+use hookwise::config::roles::{CompiledPathPolicy, PathPolicyConfig, RoleDefinition};
+use hookwise::decision::{
     CacheKey, Decision, DecisionMetadata, DecisionRecord, DecisionTier, ScopeLevel,
 };
-use captain_hook::session::SessionContext;
-use captain_hook::storage::jsonl::JsonlStorage;
+use hookwise::session::SessionContext;
+use hookwise::storage::jsonl::JsonlStorage;
 
 // ---------------------------------------------------------------------------
 // Stub tiers for deterministic testing
@@ -35,7 +35,7 @@ impl CascadeTier for NoopSupervisor {
     async fn evaluate(
         &self,
         _input: &CascadeInput,
-    ) -> captain_hook::error::Result<Option<DecisionRecord>> {
+    ) -> hookwise::error::Result<Option<DecisionRecord>> {
         Ok(None)
     }
     fn tier(&self) -> DecisionTier {
@@ -54,7 +54,7 @@ impl CascadeTier for NoopHuman {
     async fn evaluate(
         &self,
         _input: &CascadeInput,
-    ) -> captain_hook::error::Result<Option<DecisionRecord>> {
+    ) -> hookwise::error::Result<Option<DecisionRecord>> {
         Ok(None)
     }
     fn tier(&self) -> DecisionTier {
@@ -73,7 +73,7 @@ impl CascadeTier for AllowSupervisor {
     async fn evaluate(
         &self,
         input: &CascadeInput,
-    ) -> captain_hook::error::Result<Option<DecisionRecord>> {
+    ) -> hookwise::error::Result<Option<DecisionRecord>> {
         let role_name = input
             .session
             .role
@@ -161,7 +161,7 @@ fn make_runner(
     };
 
     CascadeRunner {
-        sanitizer: captain_hook::sanitize::SanitizePipeline::default_pipeline(),
+        sanitizer: hookwise::sanitize::SanitizePipeline::default_pipeline(),
         path_policy: Box::new(PathPolicyEngine::new().unwrap()),
         exact_cache: Arc::new(ExactCache::new()),
         token_jaccard: Arc::new(TokenJaccard::new(0.7, 3)),
@@ -378,7 +378,7 @@ async fn cascade_persists_decisions() {
     assert_eq!(record.decision, Decision::Allow);
 
     // Verify the decision was persisted to storage
-    use captain_hook::storage::StorageBackend;
+    use hookwise::storage::StorageBackend;
     let storage = JsonlStorage::new(tmp.path().to_path_buf(), tmp.path().join("global"), None);
     let loaded = storage.load_decisions(ScopeLevel::Project).unwrap();
     assert!(!loaded.is_empty(), "decision should be persisted to JSONL");
@@ -418,7 +418,7 @@ async fn cascade_token_similarity_auto_approves() {
 
 #[test]
 fn hook_output_serialization() {
-    use captain_hook::hook_io::HookOutput;
+    use hookwise::hook_io::HookOutput;
 
     let output = HookOutput::new(Decision::Allow);
     let json = serde_json::to_string(&output).unwrap();
@@ -435,7 +435,7 @@ fn hook_output_serialization() {
 
 #[test]
 fn hook_input_deserialization() {
-    use captain_hook::hook_io::HookInput;
+    use hookwise::hook_io::HookInput;
 
     let json = r#"{
         "session_id": "abc-123",
@@ -455,8 +455,8 @@ fn hook_input_deserialization() {
 
 #[test]
 fn scope_merge_deny_wins_over_allow() {
-    use captain_hook::scope::merge::merge_decisions;
-    use captain_hook::scope::ScopedDecision;
+    use hookwise::scope::merge::merge_decisions;
+    use hookwise::scope::ScopedDecision;
 
     let allow_record = DecisionRecord {
         key: CacheKey {
@@ -513,8 +513,8 @@ fn scope_merge_deny_wins_over_allow() {
 
 #[test]
 fn scope_merge_ask_wins_over_allow() {
-    use captain_hook::scope::merge::merge_decisions;
-    use captain_hook::scope::ScopedDecision;
+    use hookwise::scope::merge::merge_decisions;
+    use hookwise::scope::ScopedDecision;
 
     let allow_record = DecisionRecord {
         key: CacheKey {
@@ -574,14 +574,14 @@ fn scope_merge_ask_wins_over_allow() {
 // ---------------------------------------------------------------------------
 
 fn clean_queue_file() {
-    let path = captain_hook::cascade::human::pending_queue_path();
+    let path = hookwise::cascade::human::pending_queue_path();
     let _ = std::fs::remove_file(&path);
 }
 
 #[test]
 fn decision_queue_enqueue_and_list() {
     clean_queue_file();
-    use captain_hook::cascade::human::{DecisionQueue, PendingDecision};
+    use hookwise::cascade::human::{DecisionQueue, PendingDecision};
 
     let queue = DecisionQueue::new();
     let pending = PendingDecision {
@@ -608,7 +608,7 @@ fn decision_queue_enqueue_and_list() {
 #[test]
 fn decision_queue_respond_removes_pending() {
     clean_queue_file();
-    use captain_hook::cascade::human::{DecisionQueue, HumanResponse, PendingDecision};
+    use hookwise::cascade::human::{DecisionQueue, HumanResponse, PendingDecision};
 
     let queue = DecisionQueue::new();
     let pending = PendingDecision {

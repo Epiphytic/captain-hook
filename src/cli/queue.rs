@@ -50,7 +50,7 @@ pub async fn run_approve(id: &str, always_ask: bool, add_rule: bool, scope: &str
     };
 
     queue.respond(id, response)?;
-    eprintln!("captain-hook: approved {}", id);
+    eprintln!("hookwise: approved {}", id);
 
     if always_ask {
         eprintln!("  (cached as 'ask' -- will always prompt)");
@@ -81,7 +81,7 @@ pub async fn run_deny(id: &str, always_ask: bool, add_rule: bool, scope: &str) -
     };
 
     queue.respond(id, response)?;
-    eprintln!("captain-hook: denied {}", id);
+    eprintln!("hookwise: denied {}", id);
 
     if always_ask {
         eprintln!("  (cached as 'ask' -- will always prompt)");
@@ -96,7 +96,7 @@ pub async fn run_deny(id: &str, always_ask: bool, add_rule: bool, scope: &str) -
 fn parse_scope(scope: &str) -> Result<ScopeLevel> {
     scope
         .parse::<ScopeLevel>()
-        .map_err(|e| crate::error::CaptainHookError::InvalidPolicy { reason: e })
+        .map_err(|e| crate::error::HookwiseError::InvalidPolicy { reason: e })
 }
 
 fn truncate(s: &str, max: usize) -> String {

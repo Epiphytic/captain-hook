@@ -1,7 +1,7 @@
 //! Unit tests for Tier 2a: token-level Jaccard similarity.
 
-use captain_hook::cascade::token_sim::TokenJaccard;
-use captain_hook::decision::{
+use hookwise::cascade::token_sim::TokenJaccard;
+use hookwise::decision::{
     CacheKey, Decision, DecisionMetadata, DecisionRecord, DecisionTier, ScopeLevel,
 };
 use chrono::Utc;

@@ -1,8 +1,8 @@
-# ADR: Dependency Selection for captain-hook
+# ADR: Dependency Selection for hookwise
 
 **Date:** 2026-02-08
 **Status:** Accepted
-**Context:** Choosing core dependencies for vector similarity, embedding generation, and glob matching in the captain-hook permission gating system.
+**Context:** Choosing core dependencies for vector similarity, embedding generation, and glob matching in the hookwise permission gating system.
 
 ## Decision
 

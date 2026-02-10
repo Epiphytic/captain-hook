@@ -15,7 +15,7 @@ use clap::Subcommand;
 pub use cascade::CascadeRunner;
 pub use config::{CompiledPathPolicy, PolicyConfig, RoleDefinition};
 pub use decision::{CacheKey, Decision, DecisionMetadata, DecisionRecord, DecisionTier};
-pub use error::{CaptainHookError, Result};
+pub use error::{HookwiseError, Result};
 pub use hook_io::{HookFormat, HookInput, HookOutput};
 pub use session::{SessionContext, SessionManager};
 
@@ -47,13 +47,13 @@ pub enum Commands {
         prompt_file: Option<String>,
     },
 
-    /// Disable captain-hook for a session.
+    /// Disable hookwise for a session.
     Disable {
         #[arg(long)]
         session_id: String,
     },
 
-    /// Re-enable captain-hook for a disabled session.
+    /// Re-enable hookwise for a disabled session.
     Enable {
         #[arg(long)]
         session_id: String,
@@ -130,7 +130,7 @@ pub enum Commands {
         path: Option<String>,
     },
 
-    /// Initialize .captain-hook/ in the current repo.
+    /// Initialize .hookwise/ in the current repo.
     Init,
 
     /// View/edit global configuration.

@@ -6,7 +6,7 @@ use crate::config::PolicyConfig;
 use crate::decision::{
     CacheKey, Decision, DecisionMetadata, DecisionRecord, DecisionTier, ScopeLevel,
 };
-use crate::error::{CaptainHookError, Result};
+use crate::error::{HookwiseError, Result};
 
 /// Request sent to the supervisor for evaluation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,7 +66,7 @@ impl SupervisorBackend for UnixSocketSupervisor {
         use tokio::net::UnixStream;
 
         if !self.socket_path.exists() {
-            return Err(CaptainHookError::SocketNotFound {
+            return Err(HookwiseError::SocketNotFound {
                 path: self.socket_path.clone(),
             });
         }
@@ -75,7 +75,7 @@ impl SupervisorBackend for UnixSocketSupervisor {
 
         let result = tokio::time::timeout(timeout, async {
             let mut stream = UnixStream::connect(&self.socket_path).await.map_err(|e| {
-                CaptainHookError::Ipc {
+                HookwiseError::Ipc {
                     reason: format!("connect failed: {}", e),
                 }
             })?;
@@ -85,16 +85,16 @@ impl SupervisorBackend for UnixSocketSupervisor {
             stream
                 .write_all(request_json.as_bytes())
                 .await
-                .map_err(|e| CaptainHookError::Ipc {
+                .map_err(|e| HookwiseError::Ipc {
                     reason: format!("write failed: {}", e),
                 })?;
             stream
                 .write_all(b"\n")
                 .await
-                .map_err(|e| CaptainHookError::Ipc {
+                .map_err(|e| HookwiseError::Ipc {
                     reason: format!("write newline failed: {}", e),
                 })?;
-            stream.shutdown().await.map_err(|e| CaptainHookError::Ipc {
+            stream.shutdown().await.map_err(|e| HookwiseError::Ipc {
                 reason: format!("shutdown write failed: {}", e),
             })?;
 
@@ -104,18 +104,18 @@ impl SupervisorBackend for UnixSocketSupervisor {
                 .take(1_048_576)
                 .read_to_end(&mut response_buf)
                 .await
-                .map_err(|e| CaptainHookError::Ipc {
+                .map_err(|e| HookwiseError::Ipc {
                     reason: format!("read failed: {}", e),
                 })?;
 
             let response: SupervisorResponse =
                 serde_json::from_slice(&response_buf).map_err(|e| {
-                    CaptainHookError::Supervisor {
+                    HookwiseError::Supervisor {
                         reason: format!("invalid response: {}", e),
                     }
                 })?;
 
-            Ok::<SupervisorResponse, CaptainHookError>(response)
+            Ok::<SupervisorResponse, HookwiseError>(response)
         })
         .await;
 
@@ -123,7 +123,7 @@ impl SupervisorBackend for UnixSocketSupervisor {
             Ok(Ok(r)) => r,
             Ok(Err(e)) => return Err(e),
             Err(_) => {
-                return Err(CaptainHookError::SupervisorTimeout {
+                return Err(HookwiseError::SupervisorTimeout {
                     timeout_secs: self.timeout_secs,
                 })
             }
@@ -173,7 +173,7 @@ impl ApiSupervisor {
 
     fn build_system_prompt(&self, policy: &PolicyConfig) -> String {
         format!(
-            "You are a permission supervisor for captain-hook. \
+            "You are a permission supervisor for hookwise. \
             Evaluate whether a tool call should be allowed, denied, or escalated to a human.\n\n\
             Policy:\n\
             - Sensitive paths: {:?}\n\
@@ -212,11 +212,11 @@ impl ApiSupervisor {
         match (json_start, json_end) {
             (Some(start), Some(end)) if start < end => {
                 let json_str = &response_text[start..=end];
-                serde_json::from_str(json_str).map_err(|e| CaptainHookError::Supervisor {
+                serde_json::from_str(json_str).map_err(|e| HookwiseError::Supervisor {
                     reason: format!("failed to parse supervisor JSON: {}", e),
                 })
             }
-            _ => Err(CaptainHookError::Supervisor {
+            _ => Err(HookwiseError::Supervisor {
                 reason: format!("no JSON found in supervisor response: {}", response_text),
             }),
         }
@@ -249,14 +249,14 @@ impl SupervisorBackend for ApiSupervisor {
             .json(&body)
             .send()
             .await
-            .map_err(|e| CaptainHookError::Supervisor {
+            .map_err(|e| HookwiseError::Supervisor {
                 reason: format!("API request failed: {}", e),
             })?;
 
         if !resp.status().is_success() {
             let status = resp.status().as_u16();
             let body_text = resp.text().await.unwrap_or_default();
-            return Err(CaptainHookError::Api {
+            return Err(HookwiseError::Api {
                 status,
                 body: body_text,
             });
@@ -265,7 +265,7 @@ impl SupervisorBackend for ApiSupervisor {
         let resp_json: serde_json::Value =
             resp.json()
                 .await
-                .map_err(|e| CaptainHookError::Supervisor {
+                .map_err(|e| HookwiseError::Supervisor {
                     reason: format!("failed to parse API response: {}", e),
                 })?;
 
@@ -352,7 +352,7 @@ impl crate::cascade::CascadeTier for SupervisorTier {
             Ok(r) => r,
             Err(e) => {
                 eprintln!(
-                    "captain-hook: supervisor unavailable, falling through ({})",
+                    "hookwise: supervisor unavailable, falling through ({})",
                     e
                 );
                 return Ok(None);

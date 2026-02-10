@@ -1,6 +1,6 @@
 //! Unit tests for path policy: globset matching, deny-wins, sensitive paths.
 
-use captain_hook::config::roles::{CompiledPathPolicy, PathPolicyConfig};
+use hookwise::config::roles::{CompiledPathPolicy, PathPolicyConfig};
 
 fn compile_policy(
     allow_write: Vec<&str>,
@@ -200,7 +200,7 @@ fn invalid_glob_pattern_returns_error() {
 #[test]
 fn default_sensitive_paths() {
     // Test the default sensitive path patterns from PolicyConfig
-    use captain_hook::config::policy::SensitivePathConfig;
+    use hookwise::config::policy::SensitivePathConfig;
     let defaults = SensitivePathConfig::default();
     let config = PathPolicyConfig {
         allow_write: vec!["**".into()],
@@ -212,7 +212,7 @@ fn default_sensitive_paths() {
     assert!(policy.sensitive_ask_write.is_match(".claude/CLAUDE.md"));
     assert!(policy
         .sensitive_ask_write
-        .is_match(".captain-hook/policy.yml"));
+        .is_match(".hookwise/policy.yml"));
     assert!(policy.sensitive_ask_write.is_match(".env"));
     assert!(policy.sensitive_ask_write.is_match(".env.local"));
     assert!(policy.sensitive_ask_write.is_match(".git/hooks/pre-commit"));

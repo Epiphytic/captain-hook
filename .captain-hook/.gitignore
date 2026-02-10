@@ -1,5 +1,0 @@
-# Derived artifacts - rebuild locally with `captain-hook build`
-.index/
-
-# Personal preferences - not shared
-.user/

@@ -1,7 +1,7 @@
 //! Unit tests for session registration file handling.
 
-use captain_hook::session::registration;
-use captain_hook::session::RegistrationEntry;
+use hookwise::session::registration;
+use hookwise::session::RegistrationEntry;
 use chrono::Utc;
 use tempfile::TempDir;
 
@@ -183,7 +183,7 @@ fn entry_serialization_roundtrip() {
 
 #[test]
 fn session_manager_register_and_check() {
-    use captain_hook::session::SessionManager;
+    use hookwise::session::SessionManager;
 
     // Use a unique suffix to avoid conflicts with other tests
     let suffix = format!("test-{}", std::process::id());
@@ -195,7 +195,7 @@ fn session_manager_register_and_check() {
     );
 
     // Should not be registered initially (env var might interfere, but without
-    // CAPTAIN_HOOK_ROLE set this should be false if the file doesn't exist)
+    // HOOKWISE_ROLE set this should be false if the file doesn't exist)
     // Clean up from any previous runs
     let _ = mgr.disable(&session_id);
     let _ = mgr.enable(&session_id);
@@ -205,15 +205,15 @@ fn session_manager_register_and_check() {
     assert!(mgr.is_registered(&session_id));
 
     // Clean up
-    let reg_path = std::path::PathBuf::from(format!("/tmp/captain-hook-{suffix}-sessions.json"));
-    let exc_path = std::path::PathBuf::from(format!("/tmp/captain-hook-{suffix}-exclusions.json"));
+    let reg_path = std::path::PathBuf::from(format!("/tmp/hookwise-{suffix}-sessions.json"));
+    let exc_path = std::path::PathBuf::from(format!("/tmp/hookwise-{suffix}-exclusions.json"));
     let _ = std::fs::remove_file(&reg_path);
     let _ = std::fs::remove_file(&exc_path);
 }
 
 #[test]
 fn session_manager_disable_and_enable() {
-    use captain_hook::session::SessionManager;
+    use hookwise::session::SessionManager;
 
     let suffix = format!("test-dis-{}", std::process::id());
     let mgr = SessionManager::new(Some(&suffix));
@@ -230,8 +230,8 @@ fn session_manager_disable_and_enable() {
     assert!(!mgr.is_disabled(&session_id));
 
     // Clean up
-    let reg_path = std::path::PathBuf::from(format!("/tmp/captain-hook-{suffix}-sessions.json"));
-    let exc_path = std::path::PathBuf::from(format!("/tmp/captain-hook-{suffix}-exclusions.json"));
+    let reg_path = std::path::PathBuf::from(format!("/tmp/hookwise-{suffix}-sessions.json"));
+    let exc_path = std::path::PathBuf::from(format!("/tmp/hookwise-{suffix}-exclusions.json"));
     let _ = std::fs::remove_file(&reg_path);
     let _ = std::fs::remove_file(&exc_path);
 }
@@ -242,7 +242,7 @@ fn session_manager_disable_and_enable() {
 
 #[test]
 fn scope_level_from_str() {
-    use captain_hook::decision::ScopeLevel;
+    use hookwise::decision::ScopeLevel;
     use std::str::FromStr;
 
     assert_eq!(ScopeLevel::from_str("org").unwrap(), ScopeLevel::Org);
@@ -258,7 +258,7 @@ fn scope_level_from_str() {
 
 #[test]
 fn scope_level_display() {
-    use captain_hook::decision::ScopeLevel;
+    use hookwise::decision::ScopeLevel;
 
     assert_eq!(format!("{}", ScopeLevel::Org), "org");
     assert_eq!(format!("{}", ScopeLevel::Project), "project");

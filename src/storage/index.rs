@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::PathBuf;
 
-use crate::error::{CaptainHookError, Result};
+use crate::error::{HookwiseError, Result};
 
 /// Wrapper around the HNSW index for persistent storage.
 pub struct HnswIndexStore {
@@ -16,7 +16,7 @@ impl HnswIndexStore {
     /// Validate that an index name doesn't contain path traversal characters.
     fn validate_name(name: &str) -> Result<()> {
         if name.contains('/') || name.contains('\\') || name.contains("..") {
-            return Err(CaptainHookError::Storage {
+            return Err(HookwiseError::Storage {
                 reason: format!(
                     "invalid index name '{}': must not contain '/', '\\', or '..'",
                     name
@@ -31,7 +31,7 @@ impl HnswIndexStore {
         Self::validate_name(name)?;
         fs::create_dir_all(&self.index_dir)?;
         let path = self.index_dir.join(name);
-        fs::write(&path, data).map_err(|e| CaptainHookError::Storage {
+        fs::write(&path, data).map_err(|e| HookwiseError::Storage {
             reason: format!("failed to write index {}: {}", path.display(), e),
         })
     }
@@ -43,7 +43,7 @@ impl HnswIndexStore {
         if !path.exists() {
             return Ok(None);
         }
-        let data = fs::read(&path).map_err(|e| CaptainHookError::Storage {
+        let data = fs::read(&path).map_err(|e| HookwiseError::Storage {
             reason: format!("failed to read index {}: {}", path.display(), e),
         })?;
         Ok(Some(data))

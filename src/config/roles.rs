@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
-use crate::error::{CaptainHookError, Result};
+use crate::error::{HookwiseError, Result};
 
 /// A role definition from `roles.yml`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -66,13 +66,13 @@ impl CompiledPathPolicy {
 fn build_globset(patterns: &[String]) -> Result<GlobSet> {
     let mut builder = globset::GlobSetBuilder::new();
     for pattern in patterns {
-        let glob = globset::Glob::new(pattern).map_err(|e| CaptainHookError::GlobPattern {
+        let glob = globset::Glob::new(pattern).map_err(|e| HookwiseError::GlobPattern {
             pattern: pattern.clone(),
             reason: e.to_string(),
         })?;
         builder.add(glob);
     }
-    builder.build().map_err(|e| CaptainHookError::GlobPattern {
+    builder.build().map_err(|e| HookwiseError::GlobPattern {
         pattern: String::new(),
         reason: e.to_string(),
     })
@@ -217,7 +217,7 @@ fn expand_macros(
             match categories.get(name) {
                 Some(cat_patterns) => expanded.extend(cat_patterns.iter().cloned()),
                 None => {
-                    return Err(CaptainHookError::ConfigParse {
+                    return Err(HookwiseError::ConfigParse {
                         path: PathBuf::from("roles.yml"),
                         reason: format!(
                             "role '{}': unknown category '{{{{{}}}}}'. Available: {:?}",
@@ -345,7 +345,7 @@ impl RolesConfig {
         }
         let contents = std::fs::read_to_string(path)?;
         let mut config: Self =
-            serde_yaml::from_str(&contents).map_err(|e| CaptainHookError::ConfigParse {
+            serde_yaml::from_str(&contents).map_err(|e| HookwiseError::ConfigParse {
                 path: path.to_path_buf(),
                 reason: e.to_string(),
             })?;
@@ -353,9 +353,9 @@ impl RolesConfig {
         Ok(config)
     }
 
-    /// Load roles from the project root. Checks `.captain-hook/roles.yml`.
+    /// Load roles from the project root. Checks `.hookwise/roles.yml`.
     pub fn load_project(project_root: &Path) -> Result<Self> {
-        let path = project_root.join(".captain-hook").join("roles.yml");
+        let path = project_root.join(".hookwise").join("roles.yml");
         Self::load_from(&path)
     }
 

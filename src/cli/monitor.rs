@@ -10,11 +10,11 @@ use crate::storage::StorageBackend;
 /// Watches the JSONL rule files for changes and prints new decisions.
 pub async fn run_monitor() -> Result<()> {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let project_root = cwd.join(".captain-hook");
+    let project_root = cwd.join(".hookwise");
     let rules_dir = project_root.join("rules");
 
     eprintln!(
-        "captain-hook: monitoring decisions in {}",
+        "hookwise: monitoring decisions in {}",
         rules_dir.display()
     );
     eprintln!("Press Ctrl+C to stop.\n");
@@ -82,7 +82,7 @@ pub async fn run_monitor() -> Result<()> {
 /// Show cache hit rates and decision distribution.
 pub async fn run_stats() -> Result<()> {
     let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let project_root = cwd.join(".captain-hook");
+    let project_root = cwd.join(".hookwise");
     let global_root = dirs_global();
 
     let storage = JsonlStorage::new(project_root, global_root, None);
@@ -94,7 +94,7 @@ pub async fn run_stats() -> Result<()> {
     cache.load_from(decisions.clone());
     let stats = cache.stats();
 
-    println!("captain-hook statistics");
+    println!("hookwise statistics");
     println!("=======================");
     println!("Total cached decisions: {}", stats.total_entries);
     println!("  Allow: {}", stats.allow_entries);

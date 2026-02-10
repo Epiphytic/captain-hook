@@ -1,0 +1,5 @@
+# Derived artifacts - rebuild locally with `hookwise build`
+.index/
+
+# Personal preferences - not shared
+.user/

@@ -2,7 +2,7 @@
 
 **Date:** 2026-02-08
 **Source:** [gitleaks/gitleaks](https://github.com/gitleaks/gitleaks) `config/gitleaks.toml`
-**Purpose:** Curated patterns for captain-hook's Tier 1 RegexSet secret detection
+**Purpose:** Curated patterns for hookwise's Tier 1 RegexSet secret detection
 
 ## Overview
 
@@ -12,7 +12,7 @@
 3. Low false-positive rate
 4. Suitability for Rust `regex` crate RegexSet (no lookaround)
 
-Patterns are grouped into three tiers matching captain-hook's sanitization architecture:
+Patterns are grouped into three tiers matching hookwise's sanitization architecture:
 - **Aho-Corasick literals** (Tier 0) -- prefix-matchable tokens handled before RegexSet
 - **RegexSet patterns** (Tier 1) -- the patterns in this document
 - **Shannon entropy** (Tier 2) -- fallback for unknown formats

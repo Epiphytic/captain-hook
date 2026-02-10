@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use crate::decision::{
     CacheKey, Decision, DecisionMetadata, DecisionRecord, DecisionTier, ScopeLevel,
 };
-use crate::error::{CaptainHookError, Result};
+use crate::error::{HookwiseError, Result};
 use crate::scope::ScopeLevel as ScopeLevelType;
 
 /// A pending decision waiting for human response.
@@ -58,7 +58,7 @@ pub fn pending_queue_path() -> PathBuf {
     let team_suffix = std::env::var("CLAUDE_TEAM_ID")
         .map(|id| format!("-{}", id))
         .unwrap_or_default();
-    let filename = format!("captain-hook-pending{}.json", team_suffix);
+    let filename = format!("hookwise-pending{}.json", team_suffix);
 
     if let Ok(runtime_dir) = std::env::var("XDG_RUNTIME_DIR") {
         PathBuf::from(runtime_dir).join(filename)
@@ -179,7 +179,7 @@ impl DecisionQueue {
                 state.pending.remove(id);
                 let _ = save_queue_file(&state);
 
-                return Err(CaptainHookError::HumanTimeout { timeout_secs });
+                return Err(HookwiseError::HumanTimeout { timeout_secs });
             }
 
             tokio::time::sleep(std::time::Duration::from_millis(200)).await;

@@ -1,0 +1,1 @@
+prompt = """Use the hookwise_disable tool to disable hookwise permission gating for the current session. All tool calls will be permitted without evaluation."""
